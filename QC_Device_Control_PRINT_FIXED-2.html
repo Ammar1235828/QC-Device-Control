@@ -1,0 +1,3590 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>QC Device Control – قسم الجودة والتجهيز</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:'IBM Plex Sans Arabic',Tajawal,sans-serif}
+body{
+ --bg:#eef1f5;--panel:#ffffff;--panel2:#f4f7fa;--text:#182231;
+ --muted:#5c6b80;--line:#d7dee7;--blue:#0e5c73;--blue2:#e5f1f2;
+ --green:#0f8a5f;--green2:#e6f6ee;--red:#c8323f;--red2:#fbeaec;
+ --orange:#b5750a;--orange2:#fbf1de;
+ --shadow:0 1px 2px rgba(20,30,45,.04),0 8px 24px rgba(20,30,45,.06);
+ background:var(--bg);color:var(--text);overflow-x:hidden;
+ -webkit-font-smoothing:antialiased
+}
+body.dark{
+ --bg:#0b0f16;--panel:#131a24;--panel2:#182130;--text:#eef2f7;
+ --muted:#93a1b5;--line:#26313f;--blue:#3aa0b8;--blue2:#122934;
+ --green:#3ecf95;--green2:#0f2a22;--red:#f0707d;--red2:#3a191d;
+ --orange:#e8a83f;--orange2:#332512;
+ --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35)
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+#boot{
+ position:fixed;inset:0;z-index:99999;background:var(--bg);
+ display:grid;place-items:center;padding:20px
+}
+.bootbox,.login-card{
+ width:min(430px,100%);background:var(--panel);
+ border:1px solid var(--line);border-radius:16px;
+ padding:30px;box-shadow:var(--shadow)
+}
+.bootbox{text-align:center}
+.spinner{
+ width:38px;height:38px;border:3px solid var(--line);
+ border-top-color:var(--blue);border-radius:50%;margin:0 auto 16px;
+ animation:spin .75s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.error-box{
+ background:var(--red2);color:var(--red);border:1px solid rgba(200,50,63,.22);
+ padding:12px 14px;border-radius:10px;margin-top:12px;font-size:13.5px;line-height:1.7;
+ white-space:pre-wrap;text-align:right
+}
+.success-box{
+ background:var(--green2);color:var(--green);padding:12px;border-radius:10px
+}
+
+.login-screen{
+ min-height:100vh;display:grid;place-items:center;padding:20px;
+ background:
+  radial-gradient(circle at 12% 18%,rgba(14,92,115,.10),transparent 45%),
+  radial-gradient(circle at 88% 82%,rgba(14,92,115,.07),transparent 40%),
+  var(--bg)
+}
+.logo{
+ width:46px;height:46px;border-radius:11px;display:grid;place-items:center;
+ background:linear-gradient(135deg,#0e5c73,#178a9e);color:white;
+ font-size:16px;font-weight:700;letter-spacing:.5px;flex:none
+}
+.login-card h1{font-size:21px;margin:16px 0 3px;font-weight:700;letter-spacing:-.2px}
+.login-card>p{color:var(--muted);margin:0 0 22px;font-size:14px}
+.login-types{
+ display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;
+ background:var(--panel2);border:1px solid var(--line);
+ border-radius:11px;margin-bottom:20px
+}
+.login-type{
+ border:0;background:transparent;color:var(--muted);
+ border-radius:8px;padding:10px 5px;font-weight:700;font-size:13.5px;
+ transition:background .15s,color .15s
+}
+.login-type.active{background:var(--blue);color:#fff}
+.login-label{display:block;font-size:13px;font-weight:600;margin:12px 0 6px;color:var(--muted)}
+.login-card input{
+ width:100%;padding:12px 13px;border-radius:10px;border:1px solid var(--line);
+ background:var(--panel2);color:var(--text);outline:none;font-size:14.5px;
+ transition:border-color .15s,box-shadow .15s
+}
+.login-card input:focus{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 15%,transparent)}
+#inspectorCode{text-align:center;direction:ltr;letter-spacing:7px;font-size:19px;font-weight:700}
+
+header{
+ position:sticky;top:0;z-index:100;background:color-mix(in srgb,var(--panel) 92%,transparent);
+ border-bottom:1px solid var(--line);backdrop-filter:blur(10px)
+}
+.header-inner{
+ max-width:1500px;margin:auto;padding:12px 20px;
+ display:flex;gap:12px;align-items:center
+}
+.brand{flex:1;min-width:0}
+.brand h1{font-size:16px;margin:0;font-weight:700;letter-spacing:-.1px}
+.brand small{color:var(--muted);font-size:12.5px}
+.user-chip{
+ padding:7px 12px;background:var(--panel2);border:1px solid var(--line);
+ border-radius:9px;font-size:13px;line-height:1.4
+}
+.user-chip .role-text{color:var(--muted);margin-inline-start:6px}
+.icon-btn{
+ border:1px solid var(--line);background:var(--panel2);color:var(--text);
+ min-width:40px;height:40px;border-radius:9px;font-size:15px;
+ transition:background .15s,border-color .15s
+}
+.icon-btn:hover{border-color:var(--blue)}
+
+.nav-wrap{background:var(--panel);border-bottom:1px solid var(--line)}
+nav{max-width:1500px;margin:auto;padding:0 20px;display:flex;gap:2px;overflow:auto}
+nav button{
+ white-space:nowrap;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);
+ padding:13px 14px 11px;font-weight:600;font-size:14px;transition:color .15s,border-color .15s
+}
+nav button:hover{color:var(--text)}
+nav button.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+main{max-width:1500px;margin:auto;padding:26px 20px 60px}
+.page{display:none}
+.page.active{display:block}
+.page-title{margin:0 0 4px;font-size:21px;font-weight:700;letter-spacing:-.2px}
+.page-sub{margin:0 0 20px;color:var(--muted);font-size:14px;line-height:1.7}
+
+.card{
+ background:var(--panel);border:1px solid var(--line);
+ border-radius:14px;padding:20px;box-shadow:var(--shadow)
+}
+.hero{
+ padding:34px 28px;margin-bottom:18px;position:relative;overflow:hidden;
+ background:var(--panel)
+}
+.hero::before{
+ content:"";position:absolute;inset:0;
+ background:radial-gradient(circle at 8% 0%,color-mix(in srgb,var(--blue) 12%,transparent),transparent 45%)
+}
+.hero .qcicon{
+ font-size:22px;width:44px;height:44px;display:grid;place-items:center;
+ background:var(--blue2);color:var(--blue);border-radius:10px;position:relative
+}
+.hero h2{font-size:24px;margin:16px 0 4px;font-weight:700;letter-spacing:-.3px;position:relative}
+.hero .en{font-size:12px;color:var(--blue);font-weight:700;letter-spacing:.4px;position:relative}
+.hero p{color:var(--muted);line-height:1.9;max-width:780px;margin-top:12px;position:relative;font-size:14.5px}
+
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.quick{
+ min-height:120px;text-align:right;color:var(--text);background:var(--panel);
+ border:1px solid var(--line);border-radius:13px;padding:18px;
+ transition:border-color .15s,transform .15s
+}
+.quick:hover{border-color:var(--blue);transform:translateY(-1px)}
+.quick b{
+ display:inline-grid;place-items:center;width:32px;height:32px;
+ background:var(--blue2);color:var(--blue);border-radius:8px;font-size:15px;font-weight:700
+}
+.quick strong{display:block;font-size:15.5px;margin:11px 0 3px;font-weight:600}
+.quick span{color:var(--muted);font-size:13px}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.stat{border-inline-start:3px solid var(--blue)}
+.stat span{color:var(--muted);font-size:13px}
+.stat strong{display:block;font-size:26px;margin-top:6px;font-weight:700;letter-spacing:-.5px}
+
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field label{display:block;font-weight:600;margin-bottom:7px;font-size:13.5px;color:var(--muted)}
+.field input,.field select,.field textarea,.toolbar input,.toolbar select{
+ width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+ background:var(--panel2);color:var(--text);outline:none;font-size:14.5px;
+ transition:border-color .15s,box-shadow .15s
+}
+.field input:focus,.field select:focus,.toolbar input:focus,.toolbar select:focus{
+ border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 14%,transparent)
+}
+.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.toolbar input,.toolbar select{width:auto;min-width:180px}
+
+.btn{
+ border:0;border-radius:10px;padding:11px 18px;font-weight:600;font-size:14px;
+ transition:filter .15s,background .15s,border-color .15s
+}
+.btn:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.55;cursor:not-allowed;filter:none}
+.primary{background:var(--blue);color:white}
+.success{background:var(--green);color:white}
+.danger{background:var(--red);color:white}
+.soft{border:1px solid var(--line);background:var(--panel2);color:var(--text)}
+.soft:hover{border-color:var(--blue);color:var(--blue)}
+
+.table-wrap{
+ width:100%;overflow-x:auto;background:var(--panel);
+ border:1px solid var(--line);border-radius:14px
+}
+table{width:100%;border-collapse:collapse;min-width:900px}
+th,td{padding:12px 13px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle;font-size:14px}
+th{background:var(--panel2);white-space:nowrap;font-weight:600;color:var(--muted);font-size:12.5px}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--panel2)}
+
+.badge{
+ display:inline-flex;padding:4px 10px;border-radius:999px;
+ font-size:12px;font-weight:700
+}
+.badge.green{background:var(--green2);color:var(--green)}
+.badge.blue{background:var(--blue2);color:var(--blue)}
+.badge.red{background:var(--red2);color:var(--red)}
+.badge.orange{background:var(--orange2);color:var(--orange)}
+
+.empty{text-align:center;color:var(--muted);padding:38px 12px;font-size:14px}
+.device-card{margin-bottom:12px}
+.device-head{display:flex;gap:10px;align-items:start;justify-content:space-between;flex-wrap:wrap}
+.package-card{box-shadow:none;padding:15px}
+
+.permissions-grid{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:8px;margin:14px 0
+}
+.permission-option{
+ display:flex;gap:9px;align-items:center;background:var(--panel2);
+ border:1px solid var(--line);border-radius:9px;padding:11px;font-size:13.5px;
+ transition:border-color .15s
+}
+.permission-option:has(input:checked){border-color:var(--blue)}
+.users-list{display:grid;gap:10px}
+.user-row{
+ border:1px solid var(--line);background:var(--panel2);
+ border-radius:12px;padding:15px
+}
+.user-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.user-perms{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+
+#toast{
+ position:fixed;bottom:22px;left:22px;z-index:100000;
+ max-width:min(420px,calc(100% - 44px));padding:13px 18px;
+ border-radius:10px;color:white;background:#182231;font-size:14px;
+ box-shadow:0 12px 30px rgba(0,0,0,.2);
+ transform:translateY(110px);opacity:0;transition:.25s
+}
+#toast.show{transform:none;opacity:1}
+#toast.ok{background:var(--green)}
+#toast.err{background:var(--red)}
+
+@media(max-width:900px){
+ .grid,.stats{grid-template-columns:repeat(2,1fr)}
+ .form-grid{grid-template-columns:1fr}
+ .permissions-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+ .grid,.stats,.permissions-grid{grid-template-columns:1fr}
+ main{padding:18px 14px 50px}
+ .header-inner{padding:10px 14px}
+ nav{padding:0 14px}
+ .brand small,.user-chip .role-text{display:none}
+ .hero{padding:24px 18px}
+ .hero h2{font-size:20px}
+ .toolbar>*{width:100%!important}
+}
+
+/* ===== v2 additions ===== */
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.mini{padding:6px 12px;font-size:12.5px;border-radius:8px}
+.modal{position:fixed;inset:0;z-index:9000;background:rgba(10,15,25,.55);display:grid;place-items:center;padding:16px;overflow:auto}
+.modal-box{width:min(720px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.modal-box table{min-width:0}
+.modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+.modal-head h3{margin:0;font-size:18px}
+.info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.info-grid>div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.info-grid span{display:block;color:var(--muted);font-size:12px;margin-bottom:3px}
+
+.stage-row{display:flex;gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:2px}
+.stage-chip{flex:1 1 0;min-width:112px;display:flex;flex-direction:column;gap:2px;text-align:right;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel2);color:var(--text);line-height:1.45}
+.stage-chip .st-name{font-weight:700;font-size:12.5px}
+.stage-chip .st-state{font-size:11.5px;font-weight:600}
+.stage-chip .st-meta{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage-chip.done{border-color:color-mix(in srgb,var(--green) 40%,var(--line));background:var(--green2);cursor:pointer;transition:transform .12s,border-color .12s}
+.stage-chip.done .st-state{color:var(--green)}
+.stage-chip.done:hover{border-color:var(--green);transform:translateY(-1px)}
+.stage-chip.pending{opacity:.8}
+.stage-chip.pending .st-state{color:var(--orange)}
+.stage-chip.flash{box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 45%,transparent)}
+.device-card.flash{animation:flashcard 1.8s}
+@keyframes flashcard{0%,60%{box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 55%,transparent)}100%{box-shadow:var(--shadow)}}
+
+.home-header-btn{margin-inline-start:4px;white-space:nowrap}.home-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px}.home-section-title h3{margin:0;font-size:17px}.home-section-title span{color:var(--muted);font-size:12px}.home-pages-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.home-pages-grid .quick{min-height:118px}@media(max-width:800px){.home-pages-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-header-btn{font-size:11px;padding:7px 9px}}@media(max-width:520px){.home-pages-grid{grid-template-columns:1fr}.home-header-btn{font-size:10px}}
+
+.wide-table{min-width:1400px}
+.stage-ok{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;border:1px solid transparent;background:var(--green2);color:var(--green);border-radius:9px;padding:5px 10px;font-weight:700;text-align:right}
+.stage-ok .tick{font-size:16px;line-height:1.1}
+.stage-ok .rc{color:var(--text);font-weight:500;font-size:12px}
+.stage-ok:not(.static):hover{border-color:var(--green)}
+.stage-ok.static{cursor:default}
+.site-input{width:140px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text);outline:none;font-size:13.5px}
+.site-input:focus{border-color:var(--blue)}
+.site-input.saved{border-color:var(--green);background:var(--green2)}
+.link-btn{border:0;background:transparent;color:var(--red);font-size:11.5px;padding:2px 0;text-decoration:underline}
+
+.stage-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.stage-card{text-align:right;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:18px;color:var(--text);transition:border-color .15s,transform .15s}
+.stage-card:hover{border-color:var(--blue);transform:translateY(-1px)}
+.stage-card b{display:inline-grid;place-items:center;width:32px;height:32px;background:var(--blue2);color:var(--blue);border-radius:8px}
+.stage-card strong{display:block;font-size:15.5px;margin:11px 0 3px}
+.stage-card span{color:var(--muted);font-size:13px}
+
+.print-chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.chip{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13.5px}
+.chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.chip:disabled{opacity:.5;cursor:not-allowed}
+.preview-wrap{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:auto;background:#fff}
+tr.picked td{background:var(--blue2)}
+@media(max-width:600px){.info-grid{grid-template-columns:1fr}}
+
+/* v3 */
+.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.audit-table{min-width:1000px}
+.perm-grid-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(max-width:600px){.perm-grid-edit{grid-template-columns:1fr}}
+</style>
+</head>
+
+<body>
+
+<div id="boot">
+ <div class="bootbox">
+  <div class="spinner" id="bootSpinner"></div>
+  <strong id="bootTitle">جاري تشغيل نظام QC...</strong>
+  <div id="bootError" class="error-box hidden"></div>
+ </div>
+</div>
+
+<div id="loginScreen" class="login-screen hidden">
+ <div class="login-card">
+  <div class="logo">QC</div>
+  <h1>QC Device Control</h1>
+  <p>قسم الجودة والتجهيز</p>
+
+  <div class="login-types">
+   <button type="button" class="login-type active" data-login-type="inspector">👷 مراقب الجودة</button>
+   <button type="button" class="login-type" data-login-type="admin">🛡️ Admin</button>
+  </div>
+
+  <div id="inspectorLoginBox">
+   <label class="login-label">كود الدخول</label>
+   <input id="inspectorCode" type="password" maxlength="5"
+          autocomplete="current-password" placeholder="•••••">
+   <button id="inspectorLoginBtn" class="btn primary" type="button"
+           style="width:100%;margin-top:10px">دخول مراقب الجودة</button>
+  </div>
+
+  <div id="adminLoginBox" class="hidden">
+   <label class="login-label">البريد الإلكتروني</label>
+   <input id="loginEmail" type="email" autocomplete="username" placeholder="بريد Admin">
+
+   <label class="login-label">كلمة المرور</label>
+   <input id="loginPassword" type="password" autocomplete="current-password" placeholder="كلمة المرور">
+
+   <button id="loginBtn" class="btn primary" type="button"
+           style="width:100%;margin-top:10px">دخول Admin</button>
+  </div>
+
+  <div id="loginError" class="error-box hidden"></div>
+ </div>
+</div>
+
+<div id="app" class="hidden">
+
+<header>
+ <div class="header-inner">
+  <div class="logo">QC</div>
+  <div class="brand">
+   <h1>QC Device Control</h1>
+   <small>قسم الجودة والتجهيز</small>
+  </div>
+
+  <div class="user-chip">
+   <strong id="currentUserName">—</strong>
+   <span class="role-text" id="currentRole"></span>
+  </div>
+
+  <button id="homeBtn" class="btn soft mini home-header-btn" type="button" title="الشاشة الرئيسية">⌂ الرئيسية</button>
+  <button id="themeBtn" class="icon-btn" title="الوضع الليلي">☾</button>
+  <button id="logoutBtn" class="icon-btn" title="خروج">⎋</button>
+ </div>
+</header>
+
+<div class="nav-wrap">
+ <nav id="mainNav">
+  <button data-page="home" class="active">الرئيسية</button>
+  <button data-page="add">إضافة جهاز</button>
+  <button data-page="tracking">متابعة الأجهزة</button>
+  <button data-page="log">السجل العام</button>
+  <button data-page="receivers">تقرير المستلمين</button>
+  <button data-page="master">إدارة البنود</button>
+  <button data-page="print">الطباعة</button>
+  <button data-page="shipping">الشحن</button>
+   <button data-page="audit">سجل التغييرات</button>
+   <button data-page="permissions" id="permissionsTab">الصلاحيات</button>
+ </nav>
+</div>
+
+<main>
+
+<section id="page-home" class="page active">
+ <div class="card hero">
+  <div class="qcicon">✓</div>
+  <h2>قسم الجودة والسلامة المعيارية</h2>
+  <div class="en">QUALITY CONTROL & DEVICE MANAGEMENT SYSTEM</div>
+  <p>منظومة متابعة وتوثيق فحص الشحنات، تجميع الأجهزة، وإصدار الشحن للمشاريع.</p>
+ </div>
+
+ <div class="home-section-title">
+  <h3>الوصول السريع</h3>
+  <span>جميع صفحات النظام</span>
+ </div>
+
+ <div class="grid home-pages-grid">
+  <button class="quick" data-go="add"><b>＋</b><strong>إضافة جهاز</strong><span>تسجيل Package والبنود</span></button>
+  <button class="quick" data-go="tracking"><b>⌕</b><strong>متابعة الأجهزة</strong><span>متابعة الحالة والتفاصيل</span></button>
+  <button class="quick" data-go="log"><b>▦</b><strong>السجل العام</strong><span>السجل والتصدير والطباعة</span></button>
+  <button class="quick" data-go="receivers"><b>♙</b><strong>تقرير المستلمين</strong><span>التقرير حسب كل مرحلة</span></button>
+  <button class="quick" data-go="master"><b>⚙</b><strong>إدارة البنود</strong><span>إدارة Master Data والبنود</span></button>
+  <button class="quick" data-go="print"><b>🖨</b><strong>الطباعة</strong><span>طباعة وتقارير الأجهزة</span></button>
+  <button class="quick" data-go="shipping"><b>▣</b><strong>الشحن</strong><span>إصدار ومتابعة الشحن</span></button>
+  <button class="quick" data-go="audit"><b>◷</b><strong>سجل التغييرات</strong><span>متابعة كل عمليات التعديل والحذف</span></button>
+  <button class="quick" data-go="permissions"><b>♙</b><strong>الصلاحيات</strong><span>إدارة المستخدمين والصلاحيات</span></button>
+ </div>
+</section>
+
+<section id="page-add" class="page">
+ <h2 class="page-title">إضافة جهاز / Package</h2>
+ <p class="page-sub">المراقب المسجل تلقائيًا: <strong id="inspectorDisplay">—</strong></p>
+
+ <form id="packageForm" class="card">
+  <div class="form-grid">
+   <div class="field">
+    <label>المشروع</label>
+    <select id="projectSelect" required></select>
+   </div>
+   <div class="field">
+    <label>رقم الجهاز</label>
+    <input id="deviceNumber" required autocomplete="off">
+   </div>
+   <div class="field">
+    <label>Package / المرحلة</label>
+    <select id="packageSelect" required></select>
+   </div>
+   <div class="field">
+    <label>المستلم لهذه المرحلة</label>
+    <input id="receiverName" required readonly autocomplete="off" placeholder="يتم تحديده تلقائيًا من المستخدم الحالي">
+   </div>
+  </div>
+
+  <div style="height:18px"></div>
+  <div class="toolbar">
+   <strong>البنود</strong>
+   <button type="button" id="selectAllItems" class="btn soft">تحديد الكل</button>
+  </div>
+
+  <div id="itemsContainer"><div class="empty">اختر Package لعرض البنود.</div></div>
+
+  <div style="height:18px"></div>
+  <button id="savePackageBtn" type="submit" class="btn primary">حفظ الـ Package</button>
+ </form>
+</section>
+
+<section id="page-tracking" class="page">
+ <h2 class="page-title">متابعة الأجهزة</h2>
+
+ <div class="stats">
+  <div class="card stat"><span>إجمالي الأجهزة</span><strong id="statTotal">0</strong></div>
+  <div class="card stat"><span>قيد المتابعة</span><strong id="statProgress">0</strong></div>
+  <div class="card stat"><span>جاهزة للشحن</span><strong id="statReady">0</strong></div>
+  <div class="card stat"><span>إجمالي البنود</span><strong id="statItems">0</strong></div>
+ </div>
+
+ <div class="toolbar">
+  <input id="trackingSearch" placeholder="بحث برقم الجهاز">
+  <select id="trackingProject"><option value="">كل المشاريع</option></select>
+  <select id="trackingStage">
+   <option value="">كل الحالات</option>
+   <option value="progress">قيد التجميع</option>
+   <option value="ready">جاهز للشحن</option>
+   <option value="shipped">تم الشحن</option>
+  </select>
+  <button id="refreshTracking" class="btn soft">تحديث</button>
+ </div>
+
+ <div id="trackingList"></div>
+</section>
+
+<section id="page-log" class="page">
+ <h2 class="page-title">السجل العام</h2>
+ <p class="page-sub">اضغط على علامة ✓ في أي مرحلة مكتملة للانتقال إلى تفاصيلها في صفحة المتابعة.</p>
+
+ <div class="toolbar">
+  <select id="logSearchMode">
+   <option value="device">البحث برقم الجهاز</option>
+   <option value="site">البحث برقم الجهاز في الموقع</option>
+  </select>
+  <input id="logSearch" placeholder="اكتب رقم الجهاز">
+  <select id="logProject"><option value="">كل المشاريع</option></select>
+  <select id="logStatus">
+   <option value="">كل الحالات</option>
+   <option value="progress">قيد التجميع</option>
+   <option value="ready">جاهز للشحن</option>
+   <option value="shipped">تم الشحن</option>
+  </select>
+  <button id="exportLogBtn" class="btn success">Excel للمحدد</button>
+  <button id="printLogBtn" class="btn soft">طباعة / PDF للمحدد</button>
+ </div>
+
+ <div class="table-wrap">
+  <table class="wide-table">
+   <thead>
+   <tr>
+    <th><input id="selectAllLog" type="checkbox"></th>
+    <th>Serial No.</th>
+    <th>رقم الجهاز</th>
+    <th>المشروع</th>
+    <th>هياكل معدنية</th>
+    <th>إكسسوارات</th>
+    <th>Gear Box</th>
+    <th>كاوتش</th>
+    <th>منظومة الري</th>
+    <th>الحالة</th>
+    <th>تم الشحن</th>
+    <th>تاريخ الشحن</th>
+    <th>رقم الجهاز في الموقع</th>
+   </tr>
+   </thead>
+   <tbody id="logBody"></tbody>
+  </table>
+ </div>
+</section>
+
+<section id="page-receivers" class="page">
+ <h2 class="page-title">تقرير المستلمين</h2>
+ <p class="page-sub">إحصائيات وتفاصيل المستلمين حسب كل Package.</p>
+
+ <div class="toolbar">
+  <input id="receiverSearch" placeholder="بحث برقم الجهاز أو اسم المستلم" style="min-width:250px">
+  <select id="receiverProject"><option value="">كل المشاريع</option></select>
+  <select id="receiverPackage"><option value="">كل المراحل</option></select>
+  <button id="receiverExcel" class="btn success">Excel</button>
+  <button id="receiverPrint" class="btn soft">طباعة / PDF</button>
+ </div>
+
+ <div id="receiverReport"></div>
+</section>
+
+<section id="page-master" class="page">
+ <h2 class="page-title">إدارة البنود</h2>
+ <p class="page-sub" id="masterIntro">اختر المرحلة لإدارة بنودها.</p>
+ <div id="masterStatus" class="page-sub" style="margin-top:-12px"></div>
+ <div id="masterView"></div>
+</section>
+
+<section id="page-print" class="page">
+ <h2 class="page-title">الطباعة</h2>
+ <p class="page-sub">ابحث عن أي جهاز في أي مشروع، ثم اطبع مرحلة معيّنة أو الجهاز بالكامل، أو نزّل Excel / PDF.</p>
+
+ <div class="toolbar">
+  <input id="printSearch" placeholder="بحث برقم الجهاز أو رقم الجهاز في الموقع" style="min-width:280px">
+  <select id="printProject"><option value="">كل المشاريع</option></select>
+ </div>
+
+ <div id="printResults"></div>
+ <div id="printPanel" class="hidden"></div>
+</section>
+
+
+<section id="page-shipping" class="page">
+ <h2 class="page-title">الشحن</h2>
+ <p class="page-sub">ابحث برقم الجهاز وحدد المشروع لمعرفة هل الجهاز جاهز للشحن أو ما الذي ينقصه.</p>
+ <div class="toolbar">
+  <input id="shippingSearch" placeholder="بحث برقم الجهاز" style="min-width:280px">
+  <select id="shippingProject"><option value="">حدد المشروع</option></select>
+  <button id="refreshShipping" class="btn soft">تحديث</button>
+ </div>
+ <div id="shippingList"></div>
+</section>
+
+<section id="page-audit" class="page">
+ <h2 class="page-title">سجل التغييرات</h2>
+ <p class="page-sub">تسجيل من عدّل أو حذف أو غيّر رقم الموقع أو أكد/ألغى الشحن.</p>
+ <div class="toolbar">
+  <input id="auditSearch" placeholder="بحث في Serial Number أو المستخدم أو العملية أو السبب" style="min-width:300px">
+  <button id="refreshAudit" class="btn soft">تحديث</button>
+ </div>
+ <div class="table-wrap"><table class="audit-table">
+  <thead><tr><th>Serial Number</th><th>المستخدم</th><th>العملية</th><th>التاريخ والوقت</th><th>سبب التغيير</th></tr></thead>
+  <tbody id="auditBody"></tbody>
+ </table></div>
+</section>
+
+<section id="page-permissions" class="page">
+ <h2 class="page-title">إدارة المستخدمين والصلاحيات</h2>
+ <p class="page-sub">إنشاء مراقبي الجودة وتحديد الصفحات المتاحة لكل مستخدم.</p>
+
+ <div class="card">
+  <h3 style="margin-top:0">إضافة مراقب جودة</h3>
+
+  <div class="form-grid">
+   <div class="field">
+    <label>اسم المستخدم</label>
+    <input id="newUserName" placeholder="مثال: أحمد محمد" autocomplete="off">
+   </div>
+   <div class="field">
+    <label>كود الدخول</label>
+    <input id="newUserCode" maxlength="5" placeholder="5 أحرف أو أرقام"
+           autocomplete="new-password" style="direction:ltr">
+   </div>
+  </div>
+
+  <h3>الصفحات المسموحة</h3>
+
+  <div id="newUserPermissions" class="permissions-grid">
+   <label class="permission-option"><input type="checkbox" value="home" checked> الرئيسية</label>
+   <label class="permission-option"><input type="checkbox" value="add" checked> إضافة جهاز</label>
+   <label class="permission-option"><input type="checkbox" value="tracking" checked> متابعة الأجهزة</label>
+   <label class="permission-option"><input type="checkbox" value="log"> السجل العام</label>
+   <label class="permission-option"><input type="checkbox" value="receivers"> تقرير المستلمين</label>
+   <label class="permission-option"><input type="checkbox" value="master"> إدارة البنود</label>
+   <label class="permission-option"><input type="checkbox" value="print"> الطباعة</label>
+    <label class="permission-option"><input type="checkbox" value="shipping"> الشحن</label>
+    <label class="permission-option"><input type="checkbox" value="audit"> سجل التغييرات</label>
+  </div>
+
+  <button id="createUserBtn" class="btn primary" type="button">＋ إنشاء المستخدم</button>
+ </div>
+
+ <div style="height:15px"></div>
+
+ <div class="card">
+  <div class="toolbar">
+   <h3 style="margin:0;flex:1">المستخدمون</h3>
+   <button id="refreshUsersBtn" class="btn soft">تحديث</button>
+  </div>
+  <div id="usersList" class="users-list">
+   <div class="empty">جاري تحميل المستخدمين...</div>
+  </div>
+ </div>
+</section>
+
+</main>
+</div>
+
+<div id="modal" class="modal hidden"><div class="modal-box" id="modalBox"></div></div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* =========================
+   CONFIG
+========================= */
+
+const SUPABASE_URL =
+ "https://mxehkgflgtjrnqcbfuul.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+ "sb_publishable_ErhBF9Xt0WPEEEyd-1FpAw_lSxNTyfX";
+
+const DEFAULT_PACKAGES = [
+ "هياكل معدنية",
+ "إكسسوارات",
+ "Gear Box",
+ "كاوتش",
+ "منظومة الري"
+];
+
+
+function stageNames(){
+ return packageTypes?.length ? packageTypes.map(p=>p.name).filter(Boolean) : DEFAULT_PACKAGES.slice();
+}
+
+const PAGE_LABELS = {
+ home:"الرئيسية",
+ add:"إضافة جهاز",
+ tracking:"متابعة الأجهزة",
+ log:"السجل العام",
+ receivers:"تقرير المستلمين",
+ master:"إدارة البنود",
+ print:"الطباعة",
+ shipping:"الشحن",
+ audit:"سجل التغييرات",
+ permissions:"الصلاحيات"
+};
+
+let sb;
+let currentUser = null;
+let currentProfile = null;
+let currentPermissions = [];
+let projects = [];
+let packageTypes = [];
+let masterItems = [];
+let devicesCache = [];
+let submitting = false;
+let receiverRowsCache = [];
+window.receiverActionRows = [];
+
+// Pagination
+const PAGE_SIZE = 10;
+let trackingPage = 1;
+let logPage = 1;
+
+/* =========================
+   HELPERS
+========================= */
+
+const $ = id => document.getElementById(id);
+
+function esc(value){
+ return String(value ?? "")
+  .replaceAll("&","&amp;")
+  .replaceAll("<","&lt;")
+  .replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;")
+  .replaceAll("'","&#039;");
+}
+
+function toast(message,type="ok"){
+ const el=$("toast");
+ el.textContent=message;
+ el.className=type==="err" ? "show err" : "show ok";
+ clearTimeout(toast.timer);
+ toast.timer=setTimeout(()=>el.className="",3200);
+}
+
+function fatal(error){
+ console.error(error);
+ $("boot").classList.remove("hidden");
+ $("bootSpinner").classList.add("hidden");
+ $("bootTitle").textContent="تعذر تشغيل النظام";
+ $("bootError").textContent=error?.message || String(error);
+ $("bootError").classList.remove("hidden");
+}
+
+window.addEventListener("error",e=>{
+ console.error("Global JS error:",e.error || e.message);
+});
+
+window.addEventListener("unhandledrejection",e=>{
+ console.error("Unhandled Promise:",e.reason);
+});
+
+/* =========================
+   THEME
+========================= */
+
+function applyTheme(){
+ const dark=localStorage.getItem("qc-theme")==="dark";
+ document.body.classList.toggle("dark",dark);
+ if($("themeBtn")) $("themeBtn").textContent=dark?"☀":"☾";
+}
+
+/* =========================
+   SCREENS
+========================= */
+
+function showLogin(){
+ $("boot").classList.add("hidden");
+ $("app").classList.add("hidden");
+ $("loginScreen").classList.remove("hidden");
+}
+
+function showApp(){
+ $("boot").classList.add("hidden");
+ $("loginScreen").classList.add("hidden");
+ $("app").classList.remove("hidden");
+}
+
+function hasPage(page){
+ return currentProfile?.role==="admin" ||
+        currentPermissions.includes(page);
+}
+
+function applyPermissions(){
+ document.querySelectorAll("#mainNav [data-page]").forEach(btn=>{
+  const page=btn.dataset.page;
+
+  const allowed =
+   currentProfile?.role==="admin"
+   ? true
+   : hasPage(page);
+
+  btn.classList.toggle("hidden",!allowed);
+ });
+
+ document.querySelectorAll("[data-go]").forEach(btn=>{
+  btn.classList.toggle(
+   "hidden",
+   currentProfile?.role!=="admin" &&
+   !hasPage(btn.dataset.go)
+  );
+ });
+}
+
+function openPage(name,opts={}){
+ if(currentProfile?.role!=="admin" && !hasPage(name)){
+  toast("ليس لديك صلاحية لفتح هذه الصفحة.","err");
+  return;
+ }
+
+ document.querySelectorAll(".page")
+  .forEach(x=>x.classList.remove("active"));
+
+ document.querySelectorAll("#mainNav [data-page]")
+  .forEach(x=>x.classList.remove("active"));
+
+ const page=$("page-"+name);
+ if(!page) return;
+
+ page.classList.add("active");
+ localStorage.setItem("qc-active-page",name);
+
+ document.querySelector(
+  `#mainNav [data-page="${name}"]`
+ )?.classList.add("active");
+
+ closeModal();
+
+ if(name==="tracking") loadTracking().then(()=>{ if(opts.focus) focusTracking(opts.focus); });
+ if(name==="log") renderLog();
+ if(name==="receivers") renderReceiverReport();
+ if(name==="master") renderMasterList();
+ if(name==="print") renderPrintResults();
+ if(name==="permissions") loadUsers();
+
+ if(!opts.focus) window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* =========================
+   LOGIN
+========================= */
+
+async function adminLogin(){
+ const email=$("loginEmail").value.trim();
+ const password=$("loginPassword").value;
+ const err=$("loginError");
+
+ err.classList.add("hidden");
+
+ if(!email || !password){
+  err.textContent="أدخل البريد الإلكتروني وكلمة المرور.";
+  err.classList.remove("hidden");
+  return;
+ }
+
+ const btn=$("loginBtn");
+ btn.disabled=true;
+ btn.textContent="جاري الدخول...";
+
+ try{
+  const {data,error}=await sb.auth.signInWithPassword({
+   email,password
+  });
+
+  if(error) throw error;
+  if(!data.user) throw new Error("تعذر تسجيل الدخول.");
+
+ }catch(e){
+  err.textContent="تعذر تسجيل الدخول: "+e.message;
+  err.classList.remove("hidden");
+ }finally{
+  btn.disabled=false;
+  btn.textContent="دخول Admin";
+ }
+}
+
+async function inspectorLogin(){
+ const code=$("inspectorCode").value.trim().toUpperCase();
+ const err=$("loginError");
+
+ err.classList.add("hidden");
+
+ if(!/^[A-Z0-9]{5}$/.test(code)){
+  err.textContent="الكود يجب أن يكون 5 أحرف أو أرقام.";
+  err.classList.remove("hidden");
+  return;
+ }
+
+ const btn=$("inspectorLoginBtn");
+ btn.disabled=true;
+ btn.textContent="جاري التحقق...";
+
+ try{
+  const {data,error}=await sb.functions.invoke(
+   "qc-inspector-login",
+   {body:{code}}
+  );
+
+  if(error) throw error;
+
+  if(!data?.access_token || !data?.refresh_token){
+   throw new Error(data?.error || "كود الدخول غير صحيح.");
+  }
+
+  const {error:sessionError}=await sb.auth.setSession({
+   access_token:data.access_token,
+   refresh_token:data.refresh_token
+  });
+
+  if(sessionError) throw sessionError;
+
+  $("inspectorCode").value="";
+
+ }catch(e){
+  console.error(e);
+  err.textContent=
+   e?.message ||
+   "تعذر تسجيل الدخول. تأكد من نشر qc-inspector-login.";
+  err.classList.remove("hidden");
+ }finally{
+  btn.disabled=false;
+  btn.textContent="دخول مراقب الجودة";
+ }
+}
+
+/* =========================
+   PROFILE + PERMISSIONS
+========================= */
+
+function setCurrentReceiver(){
+ const name=currentProfile?.full_name || currentProfile?.name || currentUser?.user_metadata?.full_name || currentUser?.email || "";
+ const input=$("receiverName");
+ if(input){ input.value=name; input.readOnly=true; }
+}
+
+async function loadProfile(){
+ const {data,error}=await sb
+  .from("qc_profiles")
+  .select("*")
+  .eq("id",currentUser.id)
+  .maybeSingle();
+
+ if(error) throw error;
+
+ if(!data){
+  throw new Error(
+   "الحساب مسجل في Auth ولكن لا يوجد له Profile في qc_profiles."
+  );
+ }
+
+ currentProfile=data;
+ setCurrentReceiver();
+
+ const name=
+  data.full_name ||
+  data.name ||
+  currentUser.user_metadata?.full_name ||
+  currentUser.email ||
+  "مستخدم QC";
+
+ $("currentUserName").textContent=name;
+ $("inspectorDisplay").textContent=name;
+ $("currentRole").textContent=
+  data.role==="admin" ? " • Admin" :
+  data.role==="inspector" ? " • مراقب جودة" :
+  " • مستخدم";
+
+ await loadCurrentPermissions();
+ applyPermissions();
+}
+
+async function loadCurrentPermissions(){
+ if(currentProfile?.role==="admin"){
+  currentPermissions=Object.keys(PAGE_LABELS);
+  return;
+ }
+
+ /*
+   يدعم جدول qc_user_permissions المتوقع:
+   user_id UUID
+   page_key TEXT
+   allowed BOOLEAN
+ */
+ const {data,error}=await sb
+  .from("qc_user_permissions")
+  .select("page_key,allowed")
+  .eq("user_id",currentUser.id)
+  .eq("allowed",true);
+
+ if(error){
+  console.warn("qc_user_permissions:",error.message);
+
+  /* fallback آمن نسبيًا عند عدم وجود الجدول */
+  currentPermissions=["home","add","tracking"];
+  return;
+ }
+
+ currentPermissions=(data||[]).map(x=>x.page_key);
+
+ if(!currentPermissions.includes("home")){
+  currentPermissions.unshift("home");
+ }
+}
+
+/* =========================
+   MASTER DATA
+========================= */
+
+async function loadMasterData(){
+ const pr=await sb
+  .from("qc_projects")
+  .select("id,name")
+  .order("name");
+
+ if(pr.error) throw pr.error;
+ projects=pr.data||[];
+
+ const pt=await sb
+  .from("qc_package_types")
+  .select("*")
+  .order("id");
+
+ if(pt.error){
+  console.warn(pt.error);
+  packageTypes=stageNames().map((name,i)=>({id:i+1,name}));
+ }else{
+  packageTypes=pt.data?.length
+   ? pt.data
+   : stageNames().map((name,i)=>({id:i+1,name}));
+ }
+
+ const im=await sb
+  .from("qc_item_master")
+  .select("*")
+  .order("id");
+
+ if(im.error){
+  console.warn(im.error);
+  masterItems=[];
+ }else{
+  masterItems=im.data||[];
+ }
+
+ detectMasterCols();
+ fillSelectors();
+
+ $("masterStatus").textContent=
+  `Packages: ${packageTypes.length} — البنود: ${masterItems.length}`;
+}
+
+function fillSelectors(){
+ const projectOptions=projects.map(p=>
+  `<option value="${esc(p.id)}">${esc(p.name)}</option>`
+ ).join("");
+
+ $("projectSelect").innerHTML=
+  `<option value="">اختر المشروع</option>${projectOptions}`;
+
+ $("trackingProject").innerHTML=
+  `<option value="">كل المشاريع</option>${projectOptions}`;
+
+ $("logProject").innerHTML=
+  `<option value="">كل المشاريع</option>${projectOptions}`;
+
+ $("receiverProject").innerHTML=
+  `<option value="">كل المشاريع</option>${projectOptions}`;
+
+ $("printProject").innerHTML=
+  `<option value="">كل المشاريع</option>${projectOptions}`;
+
+ $("shippingProject").innerHTML=
+  `<option value="">كل المشاريع</option>${projectOptions}`;
+
+ const packages=packageTypes.map(p=>
+  `<option value="${esc(p.name)}">${esc(p.name)}</option>`
+ ).join("");
+
+ $("packageSelect").innerHTML=
+  `<option value="">اختر المرحلة</option>${packages}`;
+
+ $("receiverPackage").innerHTML=
+  `<option value="">كل المراحل</option>${packages}`;
+}
+
+function masterPackageName(item){
+ if(item.package_name) return item.package_name;
+ if(item.package_type) return item.package_type;
+
+ if(item.package_type_id){
+  return packageTypes.find(
+   p=>String(p.id)===String(item.package_type_id)
+  )?.name || "";
+ }
+
+ return "";
+}
+
+function itemName(item){
+ return item.item_name || item.name || "";
+}
+
+function renderMasterItems(){
+ const packageName=$("packageSelect").value;
+
+ if(!packageName){
+  $("itemsContainer").innerHTML=
+   `<div class="empty">اختر Package لعرض البنود.</div>`;
+  return;
+ }
+
+ const list=masterItems.filter(
+  item=>masterPackageName(item)===packageName
+ );
+
+ if(!list.length){
+  $("itemsContainer").innerHTML=
+   `<div class="empty">لا توجد بنود مسجلة لهذه المرحلة في Master Data.</div>`;
+  return;
+ }
+
+ const today=new Date().toISOString().slice(0,10);
+
+ $("itemsContainer").innerHTML=`
+ <div class="table-wrap">
+ <table>
+  <thead>
+   <tr>
+    <th>اختيار</th>
+    <th>البند</th>
+    <th>العدد</th>
+    <th>التاريخ</th>
+    <th>ملاحظات</th>
+   </tr>
+  </thead>
+  <tbody>
+   ${list.map(item=>`
+    <tr data-item-id="${esc(item.id ?? item.item_id ?? "")}">
+     <td><input class="item-check" type="checkbox"></td>
+     <td class="item-name">${esc(itemName(item))}</td>
+     <td><input class="item-qty" type="number" min="0"
+          value="${Number(item.default_quantity ?? 1)}"
+          style="width:90px"></td>
+     <td><input class="item-date" type="date" value="${today}"></td>
+     <td><input class="item-notes" placeholder="ملاحظات"></td>
+    </tr>
+   `).join("")}
+  </tbody>
+ </table>
+ </div>`;
+}
+
+/* =========================
+   MASTER (كل مرحلة مستقلة)
+========================= */
+
+let masterStage=null;
+let masterCols={pkg:null,name:null};
+let masterSearchValue="";
+
+const IMPORT_ALIASES_RAW={
+ name:["item","itemname","name","البند","اسم البند","بند"],
+ part_number:["part number","partnumber","part no","part","رقم القطعة","كود"],
+ description:["description","desc","الوصف","وصف"],
+ required:["required","مطلوب","إجباري","اجباري"],
+ default_quantity:["default quantity","quantity","qty","الكمية","العدد","الكمية الافتراضية"],
+ pkg:["package","stage","المرحلة","الباكدج"]
+};
+
+function normKey(s){
+ return String(s??"").trim().toLowerCase()
+  .replace(/[\s_\-\.\u200e\u200f]/g,"")
+  .replace(/[أإآ]/g,"ا")
+  .replace(/ة/g,"ه");
+}
+
+const IMPORT_ALIASES=Object.fromEntries(
+ Object.entries(IMPORT_ALIASES_RAW).map(([k,v])=>[k,v.map(normKey)])
+);
+
+function safeSheet(s){
+ return String(s).replace(/[:\\\/?*\[\]]/g,"-").slice(0,31)||"Sheet";
+}
+
+function dbErr(e){
+ const m=e?.message||String(e);
+ if(/could not find the function|shipped_by_name|site_device_number|row-level security/i.test(m)){
+  return m+" — تأكد من تشغيل ملف qc-updates.sql في Supabase.";
+ }
+ return m;
+}
+
+function isColumnError(e){
+ return /PGRST204|42703/.test(e?.code||"") || /column|schema cache/i.test(e?.message||"");
+}
+
+function detectMasterCols(){
+ const s=masterItems[0];
+ if(!s) return;
+ const pkgKeys=["package_name","package_type","package_type_id"];
+ masterCols.pkg=
+  pkgKeys.find(k=>k in s && s[k]!=null && s[k]!=="") ||
+  pkgKeys.find(k=>k in s) || null;
+ masterCols.name="item_name" in s ? "item_name" : ("name" in s ? "name" : null);
+}
+
+function masterIdKey(item){ return "id" in item ? "id" : "item_id"; }
+function findMaster(id){ return masterItems.find(i=>String(i[masterIdKey(i)])===String(id)); }
+function stageItems(name){ return masterItems.filter(i=>masterPackageName(i)===name); }
+
+function masterPayload(r){
+ const q=Number(r.default_quantity);
+ return {
+  part_number:r.part_number||null,
+  description:r.description||null,
+  required:r.required!==false,
+  default_quantity:Number.isFinite(q)&&String(r.default_quantity??"")!==""?q:1
+ };
+}
+
+async function insertMasterChunk(stageName,rows){
+ const stage=packageTypes.find(p=>p.name===stageName);
+ const pkgs=masterCols.pkg?[masterCols.pkg]:["package_type_id","package_name","package_type"];
+ const names=masterCols.name?[masterCols.name]:["item_name","name"];
+ let last=null;
+
+ for(const pc of pkgs){
+  for(const nc of names){
+   const payload=rows.map(r=>({
+    ...masterPayload(r),
+    [pc]:pc==="package_type_id"?stage?.id:stageName,
+    [nc]:r.name
+   }));
+
+   const {error}=await sb.from("qc_item_master").insert(payload);
+   if(!error){ masterCols={pkg:pc,name:nc}; return; }
+
+   last=error;
+   if(!isColumnError(error)) throw error;
+  }
+ }
+ throw last;
+}
+
+async function insertMasterRows(stageName,rows){
+ for(let i=0;i<rows.length;i+=200){
+  await insertMasterChunk(stageName,rows.slice(i,i+200));
+ }
+}
+
+async function updateMasterRow(item,r){
+ const nc="item_name" in item ? "item_name" : "name";
+ const idk=masterIdKey(item);
+
+ const {data,error}=await sb.from("qc_item_master")
+  .update({...masterPayload(r),[nc]:r.name})
+  .eq(idk,item[idk])
+  .select();
+
+ if(error) throw error;
+ if(!data?.length) throw new Error("لم يتم التعديل — الصلاحيات غير مفعّلة على الجدول.");
+}
+
+async function deleteMasterRow(item){
+ const idk=masterIdKey(item);
+
+ const {data,error}=await sb.from("qc_item_master")
+  .delete()
+  .eq(idk,item[idk])
+  .select();
+
+ if(error) throw error;
+ if(!data?.length) throw new Error("لم يتم الحذف — الصلاحيات غير مفعّلة على الجدول.");
+}
+
+async function reloadMasterItems(){
+ const {data,error}=await sb.from("qc_item_master").select("*").order("id");
+ if(error) throw error;
+
+ masterItems=data||[];
+ detectMasterCols();
+
+ $("masterStatus").textContent=
+  `Packages: ${packageTypes.length} — البنود: ${masterItems.length}`;
+
+ renderMasterItems();
+}
+
+function renderMasterList(){
+ const v=$("masterView");
+
+ if(!masterStage){
+  $("masterIntro").textContent="اختر المرحلة لإدارة بنودها: إضافة، تعديل، حذف، أو استيراد من Excel.";
+
+  v.innerHTML=`<div class="stage-grid">${
+   packageTypes.map((p,i)=>`
+    <button type="button" class="stage-card" data-act="stage" data-stage="${esc(p.name)}">
+     <b>${i+1}</b>
+     <strong>${esc(p.name)}</strong>
+     <span>${stageItems(p.name).length} بند</span>
+    </button>`).join("")
+  }</div>`;
+  return;
+ }
+
+ $("masterIntro").textContent="";
+
+ v.innerHTML=`
+  <div class="toolbar">
+   <button type="button" class="btn soft" data-act="back">→ كل المراحل</button>
+   <h3 style="margin:0;flex:1">${esc(masterStage)} <span class="badge blue" id="masterCount"></span></h3>
+  </div>
+
+  <div class="card">
+   <div class="toolbar">
+    <input id="masterSearch" placeholder="بحث عن بند" value="${esc(masterSearchValue)}">
+    <button type="button" class="btn primary" data-act="add">＋ إضافة بند</button>
+    <label class="btn success">استيراد من Excel
+     <input id="masterImportFile" type="file" accept=".xlsx,.xls,.csv" class="hidden">
+    </label>
+    <button type="button" class="btn soft" data-act="template">تنزيل Template</button>
+   </div>
+   <div id="masterTable"></div>
+  </div>`;
+
+ renderMasterTable();
+}
+
+function renderMasterTable(){
+ const box=$("masterTable");
+ if(!box || !masterStage) return;
+
+ const q=masterSearchValue.trim().toLowerCase();
+ const all=stageItems(masterStage);
+
+ const list=all.filter(i=>!q ||
+  itemName(i).toLowerCase().includes(q) ||
+  String(i.part_number||"").toLowerCase().includes(q) ||
+  String(i.description||"").toLowerCase().includes(q)
+ );
+
+ if($("masterCount")) $("masterCount").textContent=`${all.length} بند`;
+
+ if(!list.length){
+  box.innerHTML=`<div class="empty">${
+   all.length ? "لا توجد نتائج مطابقة."
+              : "لا توجد بنود في هذه المرحلة بعد — أضف بندًا أو استورد من Excel."
+  }</div>`;
+  return;
+ }
+
+ box.innerHTML=`
+ <div class="table-wrap">
+ <table style="min-width:760px">
+  <thead>
+   <tr>
+    <th>#</th>
+    <th>البند</th>
+    <th>Part Number</th>
+    <th>الوصف</th>
+    <th>مطلوب</th>
+    <th>الكمية</th>
+    <th>إجراءات</th>
+   </tr>
+  </thead>
+  <tbody>
+   ${list.map((i,n)=>{
+    const id=i[masterIdKey(i)];
+    return `
+    <tr>
+     <td>${n+1}</td>
+     <td>${esc(itemName(i))}</td>
+     <td>${esc(i.part_number||"")}</td>
+     <td>${esc(i.description||"")}</td>
+     <td>${i.required===false?"لا":"نعم"}</td>
+     <td>${esc(i.default_quantity??1)}</td>
+     <td style="white-space:nowrap">
+      <button type="button" class="btn soft mini" data-act="edit" data-id="${esc(id)}">تعديل</button>
+      <button type="button" class="btn danger mini" data-act="del" data-id="${esc(id)}">حذف</button>
+     </td>
+    </tr>`;
+   }).join("")}
+  </tbody>
+ </table>
+ </div>`;
+}
+
+function openItemModal(id){
+ const item=id ? findMaster(id) : null;
+
+ openModal(`
+  <div class="modal-head">
+   <h3>${item?"تعديل بند":"إضافة بند"} — ${esc(masterStage)}</h3>
+   <button type="button" class="icon-btn" data-close>✕</button>
+  </div>
+
+  <div class="form-grid">
+   <div class="field" style="grid-column:1/-1">
+    <label>البند *</label>
+    <input id="miName" autocomplete="off" value="${esc(item?itemName(item):"")}">
+   </div>
+   <div class="field">
+    <label>Part Number</label>
+    <input id="miPart" autocomplete="off" value="${esc(item?.part_number||"")}">
+   </div>
+   <div class="field">
+    <label>الكمية الافتراضية</label>
+    <input id="miQty" type="number" min="0" value="${item?Number(item.default_quantity??1):1}">
+   </div>
+   <div class="field" style="grid-column:1/-1">
+    <label>الوصف</label>
+    <input id="miDesc" autocomplete="off" value="${esc(item?.description||"")}">
+   </div>
+   <div class="field">
+    <label>مطلوب؟</label>
+    <select id="miReq"><option value="1">نعم</option><option value="0">لا</option></select>
+   </div>
+  </div>
+
+  <div class="toolbar" style="margin:16px 0 0">
+   <button type="button" class="btn primary" id="miSave">حفظ</button>
+   <button type="button" class="btn soft" data-close>إلغاء</button>
+  </div>`);
+
+ $("miReq").value=(item && item.required===false)?"0":"1";
+ $("miSave").onclick=()=>saveMasterItem(item);
+ $("modalBox").onkeydown=e=>{
+  if(e.key==="Enter" && e.target.tagName==="INPUT") $("miSave").click();
+ };
+ $("miName").focus();
+}
+
+async function saveMasterItem(item){
+ const r={
+  name:$("miName").value.trim(),
+  part_number:$("miPart").value.trim(),
+  description:$("miDesc").value.trim(),
+  required:$("miReq").value==="1",
+  default_quantity:$("miQty").value
+ };
+
+ if(!r.name){ toast("اكتب اسم البند.","err"); return; }
+
+ const key=r.name.toLowerCase();
+ const dup=stageItems(masterStage).some(
+  i=>itemName(i).trim().toLowerCase()===key && i!==item
+ );
+
+ if(dup){ toast("هذا البند موجود بالفعل في المرحلة.","err"); return; }
+
+ const btn=$("miSave");
+ btn.disabled=true;
+
+ try{
+  if(item) await updateMasterRow(item,r);
+  else await insertMasterRows(masterStage,[r]);
+
+  await reloadMasterItems();
+  closeModal();
+  renderMasterTable();
+  toast(item?"تم تعديل البند.":"تمت إضافة البند.");
+ }catch(e){
+  console.error(e);
+  toast("تعذر الحفظ: "+dbErr(e),"err");
+  btn.disabled=false;
+ }
+}
+
+async function deleteMasterItem(id){
+ const item=findMaster(id);
+ if(!item) return;
+
+ if(!confirm(`حذف البند "${itemName(item)}" من ${masterStage}؟`)) return;
+
+ try{
+  await deleteMasterRow(item);
+  await reloadMasterItems();
+  renderMasterTable();
+  toast("تم حذف البند.");
+ }catch(e){
+  console.error(e);
+  if(/foreign key/i.test(e?.message||"")){
+   toast("لا يمكن حذف بند مستخدم في أجهزة مسجلة.","err");
+  }else{
+   toast("تعذر الحذف: "+dbErr(e),"err");
+  }
+ }
+}
+
+function downloadTemplate(){
+ const stage=masterStage||"Items";
+ const ws=XLSX.utils.json_to_sheet([{
+  "Item":"",
+  "Part Number":"",
+  "Description":"",
+  "Required":"Yes",
+  "Default Quantity":1
+ }]);
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,safeSheet(stage));
+ XLSX.writeFile(wb,`QC-Items-${safeSheet(stage)}.xlsx`);
+}
+
+/* ---- Excel import (لكل مرحلة) ---- */
+
+let importWB=null;
+let importFileName="";
+let importParsed=null;
+
+async function handleImportFile(file){
+ try{
+  if(!window.XLSX) throw new Error("مكتبة Excel لم تُحمّل.");
+  const buf=await file.arrayBuffer();
+  importWB=XLSX.read(buf,{type:"array"});
+  importFileName=file.name;
+  openImportModal();
+ }catch(e){
+  toast("تعذر قراءة الملف: "+e.message,"err");
+ }
+}
+
+function openImportModal(){
+ const sheets=importWB.SheetNames;
+ const def=sheets.find(n=>normKey(n)===normKey(masterStage)) || sheets[0];
+
+ openModal(`
+  <div class="modal-head">
+   <div>
+    <h3>استيراد من Excel — ${esc(masterStage)}</h3>
+    <div class="muted small">الملف: <bdi>${esc(importFileName)}</bdi></div>
+   </div>
+   <button type="button" class="icon-btn" data-close>✕</button>
+  </div>
+
+  <div class="field">
+   <label>اختر الشيت</label>
+   <select id="impSheet">
+    ${sheets.map(s=>`<option value="${esc(s)}" ${s===def?"selected":""}>${esc(s)}</option>`).join("")}
+   </select>
+  </div>
+
+  <div id="impPreview" style="margin-top:14px"></div>
+
+  <div class="toolbar" style="margin:14px 0 0">
+   <button type="button" class="btn primary" id="impGo">استيراد</button>
+   <button type="button" class="btn soft" data-close>إلغاء</button>
+  </div>`,true);
+
+ $("impSheet").onchange=renderImportPreview;
+ $("impGo").onclick=runImport;
+ renderImportPreview();
+}
+
+function parseRequired(v){
+ return !/^(no|n|false|0|لا)$/i.test(String(v??"").trim());
+}
+
+function parseImport(sheetName){
+ const ws=importWB.Sheets[sheetName];
+ const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+ const out={valid:[],dupDb:0,dupFile:0,other:0,empty:0,noNameCol:false,total:rows.length};
+
+ if(!rows.length) return out;
+
+ const map={};
+ Object.keys(rows[0]).forEach(k=>{
+  const nk=normKey(k);
+  for(const [field,aliases] of Object.entries(IMPORT_ALIASES)){
+   if(aliases.includes(nk) && !map[field]) map[field]=k;
+  }
+ });
+
+ if(!map.name){ out.noNameCol=true; return out; }
+
+ const existing=new Set(stageItems(masterStage).map(i=>itemName(i).trim().toLowerCase()));
+ const seen=new Set();
+
+ rows.forEach(r=>{
+  const name=String(r[map.name]??"").trim();
+  if(!name){ out.empty++; return; }
+
+  if(map.pkg){
+   const pv=String(r[map.pkg]??"").trim();
+   if(pv && normKey(pv)!==normKey(masterStage)){ out.other++; return; }
+  }
+
+  const key=name.toLowerCase();
+  if(existing.has(key)){ out.dupDb++; return; }
+  if(seen.has(key)){ out.dupFile++; return; }
+  seen.add(key);
+
+  out.valid.push({
+   name,
+   part_number:map.part_number?String(r[map.part_number]??"").trim():"",
+   description:map.description?String(r[map.description]??"").trim():"",
+   required:map.required?parseRequired(r[map.required]):true,
+   default_quantity:map.default_quantity && r[map.default_quantity]!=="" ? r[map.default_quantity] : 1
+  });
+ });
+
+ return out;
+}
+
+function renderImportPreview(){
+ const res=parseImport($("impSheet").value);
+ importParsed=res;
+
+ const box=$("impPreview");
+ const btn=$("impGo");
+
+ if(!res.total){
+  box.innerHTML=`<div class="error-box">الشيت فارغ.</div>`;
+  btn.disabled=true;
+  return;
+ }
+
+ if(res.noNameCol){
+  box.innerHTML=`<div class="error-box">لم أجد عمود اسم البند (Item أو البند). حمّل الـ Template واستخدم نفس العناوين.</div>`;
+  btn.disabled=true;
+  return;
+ }
+
+ const dups=res.dupDb+res.dupFile;
+
+ box.innerHTML=`
+  <div class="toolbar" style="margin-bottom:10px">
+   <span class="badge green">سيتم استيراد: ${res.valid.length}</span>
+   ${dups?`<span class="badge orange">مكرر (تخطي): ${dups}</span>`:""}
+   ${res.other?`<span class="badge blue">لمرحلة أخرى (تخطي): ${res.other}</span>`:""}
+   ${res.empty?`<span class="badge red">بدون اسم: ${res.empty}</span>`:""}
+  </div>
+  ${res.valid.length?`
+  <div class="table-wrap">
+   <table style="min-width:0">
+    <thead><tr><th>البند</th><th>Part Number</th><th>الوصف</th><th>مطلوب</th><th>الكمية</th></tr></thead>
+    <tbody>
+     ${res.valid.slice(0,8).map(r=>`
+      <tr>
+       <td>${esc(r.name)}</td>
+       <td>${esc(r.part_number)}</td>
+       <td>${esc(r.description)}</td>
+       <td>${r.required?"نعم":"لا"}</td>
+       <td>${esc(r.default_quantity)}</td>
+      </tr>`).join("")}
+    </tbody>
+   </table>
+  </div>
+  ${res.valid.length>8?`<div class="muted small" style="margin-top:6px">… و${res.valid.length-8} بند آخر</div>`:""}
+  `:`<div class="empty">لا توجد بنود جديدة للاستيراد.</div>`}`;
+
+ btn.disabled=!res.valid.length;
+}
+
+async function runImport(){
+ const res=importParsed;
+ if(!res?.valid.length) return;
+
+ const btn=$("impGo");
+ btn.disabled=true;
+ btn.textContent="جاري الاستيراد...";
+
+ try{
+  await insertMasterRows(masterStage,res.valid);
+  await reloadMasterItems();
+  closeModal();
+  renderMasterTable();
+  toast(`تم استيراد ${res.valid.length} بند.`);
+ }catch(e){
+  console.error(e);
+  toast("تعذر الاستيراد: "+dbErr(e),"err");
+  btn.disabled=false;
+  btn.textContent="استيراد";
+ }
+}
+
+/* =========================
+   SAVE PACKAGE
+========================= */
+
+function collectItems(){
+ return [...$("itemsContainer").querySelectorAll("tbody tr")]
+  .filter(row=>row.querySelector(".item-check")?.checked)
+  .map(row=>({
+   item_id:row.dataset.itemId || null,
+   item_name:row.querySelector(".item-name").textContent.trim(),
+   quantity:Number(row.querySelector(".item-qty").value||0),
+   item_date:row.querySelector(".item-date").value||null,
+   notes:row.querySelector(".item-notes").value.trim()
+  }));
+}
+
+async function savePackage(event){
+ event.preventDefault();
+
+ if(submitting) return;
+
+ const project=projects.find(
+  p=>String(p.id)===String($("projectSelect").value)
+ );
+
+ const deviceNumber=$("deviceNumber").value.trim();
+ const packageType=$("packageSelect").value;
+ const receiver=$("receiverName").value.trim();
+ const items=collectItems();
+
+ if(!project || !deviceNumber || !packageType || !receiver){
+  toast("أكمل المشروع ورقم الجهاز والمرحلة والمستلم.","err");
+  return;
+ }
+
+ if(!items.length){
+  toast("يجب تحديد بند واحد على الأقل.","err");
+  return;
+ }
+
+ submitting=true;
+ const btn=$("savePackageBtn");
+ btn.disabled=true;
+ btn.textContent="جاري الحفظ...";
+
+ try{
+  const {error}=await sb.rpc("qc_save_package",{
+   p_project_name:project.name,
+   p_device_number:deviceNumber,
+   p_package_type:packageType,
+   p_receiver_name:receiver,
+   p_items:items
+  });
+
+  if(error) throw error;
+
+  toast("تم حفظ الـ Package بنجاح.");
+
+  setCurrentReceiver();
+  await loadTracking();
+
+ }catch(e){
+  console.error(e);
+  toast("تعذر الحفظ: "+e.message,"err");
+ }finally{
+  submitting=false;
+  btn.disabled=false;
+  btn.textContent="حفظ الـ Package";
+ }
+}
+
+/* =========================
+   PACKAGE EDIT / DELETE
+========================= */
+
+function packageEditItemsHTML(items){
+ return items.map((it,i)=>`
+  <tr data-edit-item="${esc(it.id||"")}">
+   <td><input class="edit-item-keep" type="checkbox" checked></td>
+   <td><input class="edit-item-name" value="${esc(it.item_name||it.name||"")}"></td>
+   <td><input class="edit-item-qty" type="number" min="0" value="${Number(it.quantity??0)}" style="width:90px"></td>
+   <td><input class="edit-item-date" type="date" value="${esc(String(it.item_date||"").slice(0,10))}"></td>
+   <td><input class="edit-item-notes" value="${esc(it.notes||"")}"></td>
+  </tr>`).join("");
+}
+
+function openPackageEditor(deviceId,packageId){
+ const d=findDevice(deviceId);
+ if(!d) return;
+ const p=(d.packages||[]).find(x=>String(x.id)===String(packageId));
+ if(!p) return;
+ if(d.shipped_at){ toast("لا يمكن تعديل Package بعد تأكيد الشحن. ألغِ تأكيد الشحن أولًا.","err"); return; }
+
+ openModal(`
+  <div class="modal-head"><div><h3>تعديل Package — ${esc(p.package_type)}</h3><div class="muted small">الجهاز ${esc(d.device_number)} • ${esc(d.project?.name||"—")}</div></div><button class="icon-btn" data-close>✕</button></div>
+  <div class="form-grid">
+   <div class="field"><label>المستلم</label><input id="editPkgReceiver" value="${esc(p.receiver_name||"")}"></div>
+   <div class="field"><label>المرحلة</label><input value="${esc(p.package_type)}" disabled></div>
+  </div>
+  <div class="field" style="margin-top:16px"><label>سبب التغيير <span style="color:#e11">*</span></label><textarea id="editChangeReason" rows="2" placeholder="اكتب سبب التغيير إلزاميًا"></textarea></div>
+  <div class="toolbar" style="margin-top:16px"><strong>البنود</strong><span class="muted small">أزل التحديد من البند الذي تريد حذفه، ويمكن تعديل الاسم والعدد والتاريخ والملاحظات.</span></div>
+  <div class="table-wrap"><table style="min-width:820px"><thead><tr><th>الإبقاء</th><th>البند</th><th>العدد</th><th>التاريخ</th><th>ملاحظات</th></tr></thead><tbody id="editPkgItems">${packageEditItemsHTML(p.items||[])}</tbody></table></div>
+  <div class="action-row"><button class="btn primary" id="savePackageEdit">حفظ التعديل</button><button class="btn danger" id="deletePackageBtn">حذف الـ Package</button><button class="btn soft" data-close>إلغاء</button></div>`,true);
+
+ $("savePackageEdit").onclick=()=>savePackageEdit(d.id,p.id);
+ $("deletePackageBtn").onclick=()=>deletePackage(d.id,p.id);
+}
+
+function collectEditedPackageItems(){
+ return [...document.querySelectorAll("#editPkgItems tr[data-edit-item]")].filter(r=>r.querySelector(".edit-item-keep")?.checked).map(r=>({
+  id:r.dataset.editItem||null,
+  item_name:r.querySelector(".edit-item-name").value.trim(),
+  quantity:Number(r.querySelector(".edit-item-qty").value||0),
+  item_date:r.querySelector(".edit-item-date").value||null,
+  notes:r.querySelector(".edit-item-notes").value.trim()
+ })).filter(x=>x.item_name);
+}
+
+async function savePackageEdit(deviceId,packageId){
+ const receiver=$("editPkgReceiver").value.trim();
+ const reason=$("editChangeReason")?.value.trim()||"";
+ const items=collectEditedPackageItems();
+ if(!receiver || !items.length){ toast("المستلم والبنود مطلوبان.","err"); return; }
+ if(!reason){ toast("سبب التغيير مطلوب.","err"); return; }
+ const btn=$("savePackageEdit"); btn.disabled=true; btn.textContent="جاري الحفظ...";
+ try{
+  const {error}=await sb.rpc("qc_update_package",{p_package_id:String(packageId),p_receiver_name:receiver,p_items:items,p_reason:reason});
+  if(error) throw error;
+  closeModal(); devicesCache=await getDevices(); updateStats(); renderTracking(); renderLog();
+  toast("تم تعديل الـ Package وتسجيل التغيير.");
+ }catch(e){ console.error(e); toast("تعذر تعديل الـ Package: "+dbErr(e),"err"); }
+ finally{btn.disabled=false;btn.textContent="حفظ التعديل";}
+}
+
+async function deletePackage(deviceId,packageId){
+ const d=findDevice(deviceId); if(!d) return false;
+ if(d.shipped_at){ toast("لا يمكن حذف Package بعد تأكيد الشحن.","err"); return false; }
+ const p=(d.packages||[]).find(x=>String(x.id)===String(packageId));
+ const reason=prompt(`سبب حذف ${p?.package_type||"Package"} للجهاز ${d.device_number}:`);
+ if(reason===null) return false;
+ if(!reason.trim()){ toast("سبب التغيير مطلوب.","err"); return false; }
+ try{
+  const {error}=await sb.rpc("qc_delete_package",{p_package_id:String(packageId),p_reason:reason.trim()});
+  if(error) throw error;
+  closeModal(); devicesCache=await getDevices(); updateStats(); renderTracking(); renderLog();
+  toast("تم حذف الـ Package.");
+  return true;
+ }catch(e){ console.error(e); toast("تعذر حذف الـ Package: "+dbErr(e),"err"); return false; }
+}
+
+/* =========================
+   DEVICES
+========================= */
+
+async function getDevices(){
+ const {data,error}=await sb
+  .from("qc_devices")
+  .select(`
+   *,
+   project:qc_projects(id,name),
+   packages:qc_packages(
+    *,
+    items:qc_items(*)
+   )
+  `)
+  .order("created_at",{ascending:false});
+
+ if(error) throw error;
+ return data||[];
+}
+
+function statusOf(device){
+ if(device.shipped_at){
+  return {key:"shipped",label:"تم الشحن",css:"green"};
+ }
+
+ const registered=new Set(
+  (device.packages||[]).map(p=>p.package_type)
+ );
+
+ const complete=stageNames().every(
+  name=>registered.has(name)
+ );
+
+ if(complete){
+  return {key:"ready",label:"جاهز للشحن",css:"blue"};
+ }
+
+ return {key:"progress",label:"قيد التجميع",css:"orange"};
+}
+
+function updateStats(){
+ const itemCount=devicesCache.reduce(
+  (total,d)=>total+(d.packages||[]).reduce(
+   (sum,p)=>sum+(p.items||[]).length,0
+  ),0
+ );
+
+ $("statTotal").textContent=devicesCache.length;
+ $("statProgress").textContent=
+  devicesCache.filter(d=>statusOf(d).key==="progress").length;
+ $("statReady").textContent=
+  devicesCache.filter(d=>statusOf(d).key==="ready").length;
+ $("statItems").textContent=itemCount;
+}
+
+async function loadTracking(){
+ try{
+  devicesCache=await getDevices();
+  updateStats();
+  renderTracking();
+ }catch(e){
+  console.error(e);
+  toast("تعذر تحميل الأجهزة: "+e.message,"err");
+ }
+}
+
+function filteredDevices(searchId,projectId,stageId){
+ const search=$(searchId)?.value.trim().toLowerCase()||"";
+ const project=$(projectId)?.value||"";
+ const stage=stageId ? ($(stageId)?.value||"") : "";
+
+ return devicesCache.filter(d=>{
+  const searchOK=
+   !search ||
+   String(d.device_number||"").toLowerCase().includes(search);
+
+  const projectOK=
+   !project ||
+   String(d.project_id||d.project?.id)===String(project);
+
+  const stageOK=
+   !stage ||
+   statusOf(d).key===stage;
+
+  return searchOK && projectOK && stageOK;
+ });
+}
+
+/* ---------- helpers ---------- */
+
+function fmtDT(v){
+ if(!v) return "";
+ const s=String(v);
+ if(s.length<=10) return s;
+ const d=new Date(s);
+ if(isNaN(d)) return s.slice(0,10);
+ const p=n=>String(n).padStart(2,"0");
+ return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function pkgMap(d){
+ return new Map((d.packages||[]).map(p=>[p.package_type,p]));
+}
+
+function isReady(d){
+ const m=pkgMap(d);
+ return stageNames().every(n=>m.has(n));
+}
+
+function currentName(){
+ return currentProfile?.full_name || currentProfile?.name ||
+        currentUser?.user_metadata?.full_name || currentUser?.email || "مستخدم QC";
+}
+
+function findDevice(id){
+ return devicesCache.find(x=>String(x.id)===String(id));
+}
+
+/* ---------- MODAL ---------- */
+
+function openModal(html,wide){
+ const box=$("modalBox");
+ box.innerHTML=html;
+ box.onkeydown=null;
+ box.style.width=wide?"min(860px,100%)":"";
+ $("modal").classList.remove("hidden");
+ document.body.style.overflow="hidden";
+}
+
+function closeModal(){
+ $("modal").classList.add("hidden");
+ $("modalBox").innerHTML="";
+ document.body.style.overflow="";
+}
+
+function renderPager(id,current,total,onPage){
+ const box=$(id); if(!box) return;
+ if(total<=1){box.innerHTML="";return;}
+ let h=`<button class="btn soft mini" ${current<=1?"disabled":""} data-p="${current-1}">السابق</button>`;
+ const start=Math.max(1,current-2), end=Math.min(total,current+2);
+ for(let i=start;i<=end;i++) h+=`<button class="btn ${i===current?"primary":"soft"} mini" data-p="${i}">${i}</button>`;
+ h+=`<button class="btn soft mini" ${current>=total?"disabled":""} data-p="${current+1}">التالي</button>`;
+ box.innerHTML=h;
+ box.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=Number(b.dataset.p);if(p>=1&&p<=total)onPage(p);});
+}
+
+/* ---------- TRACKING ---------- */
+
+function renderTracking(){
+ const filtered=filteredDevices("trackingSearch","trackingProject","trackingStage");
+ const pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+ trackingPage=Math.min(trackingPage,pages);
+ const list=filtered.slice((trackingPage-1)*PAGE_SIZE,trackingPage*PAGE_SIZE);
+ renderPager("trackingPager",trackingPage,pages,p=>{trackingPage=p;renderTracking();});
+
+ if(!list.length){
+  $("trackingList").innerHTML=
+   `<div class="card empty">لا توجد أجهزة مطابقة.</div>`;
+  return;
+ }
+
+ $("trackingList").innerHTML=list.map(d=>{
+  const status=statusOf(d);
+  const map=pkgMap(d);
+
+  return `
+  <article class="card device-card" id="dev-${esc(d.id)}">
+   <div class="device-head">
+    <div>
+     <strong style="font-size:19px">الجهاز: ${esc(d.device_number)}</strong>
+     <div style="color:var(--muted);margin-top:3px">
+      ${esc(d.project?.name||"—")}
+      ${d.site_device_number?` • رقم الموقع: <bdi>${esc(d.site_device_number)}</bdi>`:""}
+     </div>
+     ${d.shipped_at?`
+     <div class="muted small" style="margin-top:5px">
+      ✓ تم تأكيد الشحن من قبل <b>${esc(d.shipped_by_name||"—")}</b>
+      — <bdi>${esc(fmtDT(d.shipped_at))}</bdi>
+     </div>`:""}
+    </div>
+    <span class="badge ${status.css}">${status.label}</span>
+   </div>
+
+   <div class="action-row" style="justify-content:flex-start;margin-top:14px">
+    ${!d.shipped_at?`<button type="button" class="btn danger mini" data-device-delete="${esc(d.id)}">🗑 حذف الجهاز</button>`:""}
+   </div>
+
+   <div class="stage-row">
+    ${stageNames().map(name=>{
+     const p=map.get(name);
+     return p
+      ? `<button type="button" class="stage-chip done" data-device="${esc(d.id)}" data-stage="${esc(name)}" title="اضغط لعرض التفاصيل">
+          <span class="st-name">${esc(name)}</span>
+          <span class="st-state">✓ مكتملة</span>
+          <span class="st-meta">${esc(p.receiver_name||"—")} • ${(p.items||[]).length} بند</span>
+         </button>`
+      : `<div class="stage-chip pending">
+          <span class="st-name">${esc(name)}</span>
+          <span class="st-state">⏳ لم تُسجل</span>
+         </div>`;
+    }).join("")}
+   </div>
+  </article>`;
+ }).join("");
+}
+
+async function deleteDevice(deviceId){
+ const d=findDevice(deviceId);
+ if(!d) return;
+ if(d.shipped_at){ toast("لا يمكن حذف جهاز بعد تأكيد الشحن.","err"); return; }
+ if(!confirm(`تأكيد حذف الجهاز ${d.device_number} بالكامل؟\nسيتم حذف جميع الـ Packages والبنود التابعة له.`)) return;
+ try{
+  const {error}=await sb.rpc("qc_delete_device",{p_device_id:String(d.id)});
+  if(error) throw error;
+  devicesCache=await getDevices();
+  updateStats();
+  renderTracking();
+  renderLog();
+  renderShippingPage();
+  renderReceiverReport();
+  toast("تم حذف الجهاز بالكامل.");
+ }catch(e){ console.error(e); toast("تعذر حذف الجهاز: "+dbErr(e),"err"); }
+}
+
+function openStageModal(deviceId,stageName){
+ const d=findDevice(deviceId);
+ if(!d) return;
+
+ const p=pkgMap(d).get(stageName);
+ if(!p) return;
+
+ const items=p.items||[];
+
+ openModal(`
+  <div class="modal-head">
+   <div>
+    <h3>${esc(stageName)}</h3>
+    <div class="muted small">الجهاز <bdi>${esc(d.device_number)}</bdi> • ${esc(d.project?.name||"—")}</div>
+   </div>
+   <button type="button" class="icon-btn" data-close>✕</button>
+  </div>
+
+  <div class="info-grid">
+   <div><span>المستلم</span><strong>${esc(p.receiver_name||"—")}</strong></div>
+   <div><span>تاريخ التسجيل</span><strong><bdi>${esc(fmtDT(p.created_at)||"—")}</bdi></strong></div>
+   <div><span>عدد البنود</span><strong>${items.length}</strong></div>
+  </div>
+
+  ${items.length?`
+  <div class="table-wrap">
+   <table>
+    <thead><tr><th>#</th><th>البند المستلم</th><th>العدد</th><th>التاريخ</th><th>ملاحظات</th></tr></thead>
+    <tbody>
+     ${items.map((it,i)=>`
+      <tr>
+       <td>${i+1}</td>
+       <td>${esc(it.item_name||it.name||"")}</td>
+       <td>${esc(it.quantity??"")}</td>
+       <td><bdi>${esc(String(it.item_date||"").slice(0,10))}</bdi></td>
+       <td>${esc(it.notes||"")}</td>
+      </tr>`).join("")}
+    </tbody>
+   </table>
+  </div>`:`<div class="empty">لا توجد بنود مسجلة.</div>`}
+
+  <div class="action-row">
+   ${!d.shipped_at?`<button type="button" class="btn primary" id="stageEditBtn">تعديل الـ Package</button><button type="button" class="btn danger" id="stageDeleteBtn">حذف الـ Package</button>`:""}
+   ${hasPage("print")?`<button type="button" class="btn soft" id="stagePrintBtn">🖨 طباعة هذه المرحلة</button>`:""}
+  </div>`,true);
+
+ const eb=$("stageEditBtn"); if(eb) eb.onclick=()=>openPackageEditor(d.id,p.id);
+ const db=$("stageDeleteBtn"); if(db) db.onclick=()=>deletePackage(d.id,p.id);
+ const pb=$("stagePrintBtn"); if(pb) pb.onclick=()=>openPrintFor(d.id,stageName);
+}
+
+function focusTracking({deviceId,stage}){
+ const el=document.getElementById("dev-"+deviceId);
+ if(!el) return;
+
+ el.scrollIntoView({behavior:"smooth",block:"start"});
+ el.classList.add("flash");
+ setTimeout(()=>el.classList.remove("flash"),1900);
+
+ if(stage) openStageModal(deviceId,stage);
+}
+
+function goToStage(deviceId,stage){
+ const d=findDevice(deviceId);
+ if(!d) return;
+
+ if(!hasPage("tracking")){
+  toast("ليس لديك صلاحية صفحة المتابعة.","err");
+  return;
+ }
+
+ $("trackingSearch").value=d.device_number||"";
+ $("trackingProject").value=String(d.project_id||d.project?.id||"");
+ $("trackingStage").value="";
+
+ openPage("tracking",{focus:{deviceId:d.id,stage}});
+}
+
+/* =========================
+   GENERAL LOG
+========================= */
+
+let logRowsCache=[];
+
+function logFiltered(){
+ const q=$("logSearch").value.trim().toLowerCase();
+ const mode=$("logSearchMode").value;
+ const project=$("logProject").value;
+ const statusFilter=$("logStatus")?.value||"";
+
+ return devicesCache.filter(d=>{
+  const field=mode==="site" ? d.site_device_number : d.device_number;
+
+  const searchOK=!q || String(field||"").toLowerCase().includes(q);
+  const projectOK=!project ||
+   String(d.project_id||d.project?.id)===String(project);
+  const statusOK=!statusFilter || statusOf(d).key===statusFilter;
+
+  return searchOK && projectOK && statusOK;
+ });
+}
+
+async function renderLog(){
+ try{
+  if(!devicesCache.length) devicesCache=await getDevices();
+
+  const filtered=logFiltered();
+  const pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+  logPage=Math.min(logPage,pages);
+  const list=filtered.slice((logPage-1)*PAGE_SIZE,logPage*PAGE_SIZE);
+  logRowsCache=list;
+  renderPager("logPager",logPage,pages,p=>{logPage=p;renderLog();});
+  $("selectAllLog").checked=false;
+
+  const canGo=hasPage("tracking");
+  const isAdmin=currentProfile?.role==="admin";
+
+  $("logBody").innerHTML=list.map((d,index)=>{
+   const map=pkgMap(d);
+   const status=statusOf(d);
+
+   const cells=stageNames().map(name=>{
+    const p=map.get(name);
+
+    return `<td>${
+     p
+     ? `<button type="button" class="stage-ok ${canGo?"":"static"}"
+          data-device="${esc(d.id)}" data-stage="${esc(name)}"
+          title="${canGo?"اضغط للانتقال إلى المتابعة":""}">
+          <span class="tick">✓</span>
+          <span class="rc">${esc(p.receiver_name||"—")}</span>
+        </button>`
+     : `<span class="badge orange">⏳ تحت التنفيذ</span>`
+    }</td>`;
+   }).join("");
+
+   const shipCell=d.shipped_at
+    ? `<span class="badge green">✓ تم تأكيد الشحن</span>
+       <div class="small" style="margin-top:4px">من قبل <b>${esc(d.shipped_by_name||"—")}</b></div>
+       <div class="action-row" style="margin-top:6px">
+        <button type="button" class="btn soft mini" data-permit="${esc(d.id)}">📄 إذن الشحن</button>
+        ${isAdmin?`<button type="button" class="link-btn" data-unship="${esc(d.id)}">إلغاء التأكيد</button>`:""}
+       </div>`
+    : (isReady(d)
+       ? `<button type="button" class="btn soft mini" data-ship="${esc(d.id)}">تأكيد الشحن</button>`
+       : `<span class="muted small">بانتظار اكتمال المراحل</span>`);
+
+   return `
+   <tr data-id="${esc(d.id)}">
+    <td><input type="checkbox" class="log-check"></td>
+    <td>${index+1}</td>
+    <td><strong>${esc(d.device_number||"—")}</strong></td>
+    <td>${esc(d.project?.name||"—")}</td>
+    ${cells}
+    <td><span class="badge ${status.css}">${status.label}</span></td>
+    <td>${shipCell}</td>
+    <td>${d.shipped_at?`<bdi>${esc(fmtDT(d.shipped_at))}</bdi>`:"—"}</td>
+    <td><input class="site-input" data-device="${esc(d.id)}"
+         value="${esc(d.site_device_number||"")}" placeholder="أدخل الرقم" autocomplete="off"></td>
+   </tr>`;
+  }).join("");
+
+  if(!list.length){
+   $("logBody").innerHTML=
+    `<tr><td colspan="13" class="empty">لا توجد بيانات.</td></tr>`;
+  }
+ }catch(e){
+  toast("تعذر تحميل السجل: "+e.message,"err");
+ }
+}
+
+async function confirmShipping(id){
+ const d=findDevice(id);
+ if(!d) return;
+
+ if(!isReady(d)){
+  toast("لا يمكن تأكيد الشحن قبل اكتمال كل المراحل.","err");
+  return;
+ }
+
+ if(!confirm(`تأكيد شحن الجهاز ${d.device_number}؟`)) return;
+
+ try{
+  const {error}=await sb.rpc("qc_confirm_shipping",{
+   p_device_id:String(d.id),
+   p_name:currentName()
+  });
+  if(error) throw error;
+
+  devicesCache=await getDevices();
+  updateStats();
+  renderLog();
+  toast("تم تأكيد الشحن.");
+  setTimeout(()=>printShippingPermit(d.id),150);
+ }catch(e){
+  console.error(e);
+  toast("تعذر تأكيد الشحن: "+dbErr(e),"err");
+ }
+}
+
+async function cancelShipping(id){
+ const d=findDevice(id);
+ if(!d) return;
+
+ if(!confirm(`إلغاء تأكيد شحن الجهاز ${d.device_number}؟`)) return;
+
+ try{
+  const {error}=await sb.rpc("qc_cancel_shipping",{p_device_id:String(d.id)});
+  if(error) throw error;
+
+  devicesCache=await getDevices();
+  updateStats();
+  renderLog();
+  toast("تم إلغاء تأكيد الشحن.");
+ }catch(e){
+  console.error(e);
+  toast("تعذر الإلغاء: "+dbErr(e),"err");
+ }
+}
+
+async function saveSiteNumber(input){
+ const d=findDevice(input.dataset.device);
+ if(!d) return;
+
+ const value=input.value.trim();
+ if(value===(d.site_device_number||"")) return;
+
+ input.disabled=true;
+
+ try{
+  const {error}=await sb.rpc("qc_set_site_number",{
+   p_device_id:String(d.id),
+   p_value:value
+  });
+  if(error) throw error;
+
+  d.site_device_number=value||null;
+  input.classList.add("saved");
+  setTimeout(()=>input.classList.remove("saved"),1300);
+  toast("تم حفظ رقم الجهاز في الموقع.");
+ }catch(e){
+  console.error(e);
+  input.value=d.site_device_number||"";
+  toast("تعذر الحفظ: "+dbErr(e),"err");
+ }finally{
+  input.disabled=false;
+ }
+}
+
+function selectedLogItems(){
+ return [...document.querySelectorAll("#logBody tr[data-id]")]
+  .filter(tr=>tr.querySelector(".log-check")?.checked)
+  .map(tr=>{
+   const i=logRowsCache.findIndex(d=>String(d.id)===tr.dataset.id);
+   return {d:logRowsCache[i],serial:i+1};
+  })
+  .filter(x=>x.d);
+}
+
+function logObjects(items){
+ return items.map(({d,serial})=>{
+  const map=pkgMap(d);
+  const o={
+   "Serial No.":serial,
+   "رقم الجهاز":d.device_number||"",
+   "المشروع":d.project?.name||"—"
+  };
+
+  stageNames().forEach(n=>{
+   const p=map.get(n);
+   o[n]=p ? `✓ ${p.receiver_name||""}`.trim() : "قيد التنفيذ";
+  });
+
+  o["الحالة"]=statusOf(d).label;
+  o["تم الشحن"]=d.shipped_at
+   ? `تم تأكيد الشحن من قبل ${d.shipped_by_name||"—"}` : "";
+  o["تاريخ الشحن"]=d.shipped_at ? fmtDT(d.shipped_at) : "";
+  o["رقم الجهاز في الموقع"]=d.site_device_number||"";
+  return o;
+ });
+}
+
+function exportLog(){
+ const items=selectedLogItems();
+
+ if(!items.length){
+  toast("حدد صفًا واحدًا على الأقل.","err");
+  return;
+ }
+
+ const ws=XLSX.utils.json_to_sheet(logObjects(items));
+ const wb=XLSX.utils.book_new();
+ wb.Workbook={Views:[{RTL:true}]};
+ XLSX.utils.book_append_sheet(wb,ws,"QC Log");
+ XLSX.writeFile(wb,"QC-General-Log.xlsx");
+}
+
+function printLog(){
+ const items=selectedLogItems();
+
+ if(!items.length){
+  toast("حدد صفًا واحدًا على الأقل.","err");
+  return;
+ }
+
+ printObjects("السجل العام",logObjects(items));
+}
+
+/* =========================
+   SHIPPING PERMIT + AUDIT
+========================= */
+
+function shippingPermitHTML(d){
+ const stages=stageNames();
+ const map=pkgMap(d);
+ return `<div class="rpt" style="max-width:900px;margin:auto">
+  <h1>إذن شحن</h1><div class="sub">QC Device Control — قسم الجودة والتجهيز</div>
+  <div class="meta">
+   <div><span>رقم الجهاز</span><bdi><b>${esc(d.device_number||"—")}</b></bdi></div>
+   <div><span>المشروع</span><b>${esc(d.project?.name||"—")}</b></div>
+   <div><span>رقم الجهاز في الموقع</span><bdi><b>${esc(d.site_device_number||"—")}</b></bdi></div>
+   <div><span>حالة الشحن</span><b>تم تأكيد الشحن</b></div>
+   <div><span>تم التأكيد بواسطة</span><b>${esc(d.shipped_by_name||"—")}</b></div>
+   <div><span>تاريخ ووقت التأكيد</span><bdi><b>${esc(fmtDT(d.shipped_at)||"—")}</b></bdi></div>
+  </div>
+  <h3>المراحل المسجلة</h3>
+  <table><thead><tr><th>المرحلة</th><th>المستلم</th><th>عدد البنود</th><th>تاريخ التسجيل</th></tr></thead><tbody>
+   ${stages.map(n=>{const p=map.get(n);return `<tr><td>${esc(n)}</td><td>${esc(p?.receiver_name||"—")}</td><td>${p?(p.items||[]).length:0}</td><td><bdi>${esc(p?fmtDT(p.created_at):"—")}</bdi></td></tr>`}).join("")}
+  </tbody></table>
+  <div style="margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:40px;text-align:center"><div>مسؤول الجودة<br><br>________________</div><div>مسؤول الشحن<br><br>________________</div></div>
+ </div>`;
+}
+
+function printShippingPermit(id){
+ const d=findDevice(id); if(!d) return;
+ if(!d.shipped_at){ toast("لم يتم تأكيد الشحن لهذا الجهاز بعد.","err"); return; }
+ printHTMLWindow("إذن شحن — "+d.device_number,shippingPermitHTML(d));
+}
+
+function shippingMissing(d){
+ const map=pkgMap(d);
+ const missing=[];
+
+ stageNames().forEach(stage=>{
+  const pkg=map.get(stage);
+  const masters=masterItems.filter(i=>masterPackageName(i)===stage && i.required!==false);
+
+  if(!pkg){
+   missing.push({stage,item:"المرحلة بالكامل",required:"—",actual:"—",type:"package"});
+   return;
+  }
+
+  const actualMap=new Map((pkg.items||[]).map(it=>[itemName(it),Number(it.quantity||0)]));
+  masters.forEach(m=>{
+   const name=itemName(m);
+   const required=Number(m.default_quantity??1);
+   const actual=actualMap.get(name)||0;
+   if(actual<required){
+    missing.push({stage,item:name,required,actual,type:"item"});
+   }
+  });
+ });
+
+ return missing;
+}
+
+function openShippingMissing(deviceId){
+ const d=findDevice(deviceId);
+ if(!d) return;
+ const missing=shippingMissing(d);
+
+ if(!missing.length){
+  toast("الجهاز جاهز للشحن.");
+  return;
+ }
+
+ openModal(`
+  <div class="modal-head">
+   <div><h3>الأجزاء الناقصة</h3><div class="muted small">الجهاز <bdi>${esc(d.device_number)}</bdi> • ${esc(d.project?.name||"—")}</div></div>
+   <button type="button" class="icon-btn" data-close>✕</button>
+  </div>
+  <div class="card" style="background:var(--orange2);border-color:color-mix(in srgb,var(--orange) 35%,var(--line));margin-bottom:14px">
+   <strong>الجهاز لم يكتمل بعد</strong>
+   <div class="muted small" style="margin-top:4px">عدد النواقص: ${missing.length}</div>
+  </div>
+  <div class="table-wrap">
+   <table style="min-width:620px">
+    <thead><tr><th>المرحلة</th><th>البند الناقص</th><th>المطلوب</th><th>المسجل</th><th>الناقص</th></tr></thead>
+    <tbody>${missing.map(x=>`
+     <tr>
+      <td>${esc(x.stage)}</td>
+      <td>${esc(x.item)}</td>
+      <td>${esc(x.required)}</td>
+      <td>${esc(x.actual)}</td>
+      <td><span class="badge red">${x.type==="package"?"المرحلة كاملة":Math.max(0,Number(x.required)-Number(x.actual))}</span></td>
+     </tr>`).join("")}</tbody>
+   </table>
+  </div>
+  <div class="action-row"><button type="button" class="btn soft" data-close>إغلاق</button></div>
+ `,true);
+}
+
+function renderShippingPage(){
+ const q=$("shippingSearch").value.trim().toLowerCase();
+ const pr=$("shippingProject").value;
+ const list=devicesCache.filter(d=>
+  (!pr || String(d.project_id||d.project?.id)===String(pr)) &&
+  (!q || String(d.device_number||"").toLowerCase().includes(q))
+ );
+
+ if(!list.length){
+  $("shippingList").innerHTML=`<div class="card empty">لا توجد أجهزة مطابقة. اختر المشروع واكتب رقم الجهاز.</div>`;
+  return;
+ }
+
+ $("shippingList").innerHTML=`<div class="table-wrap"><table><thead><tr><th>الجهاز</th><th>المشروع</th><th>المراحل المكتملة</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>${list.map(d=>{
+  const ready=isReady(d), shipped=!!d.shipped_at, missing=shippingMissing(d);
+  return `<tr>
+   <td><bdi>${esc(d.device_number||"—")}</bdi></td>
+   <td>${esc(d.project?.name||"—")}</td>
+   <td>${stageNames().filter(n=>pkgMap(d).has(n)).length} / ${stageNames().length}</td>
+   <td>${shipped
+    ? `<span class="badge green">تم الشحن</span>`
+    : ready
+     ? `<span class="badge green">جاهز للشحن</span>`
+     : `<button type="button" class="btn soft mini" data-shipping-missing="${esc(d.id)}">لم يكتمل — عرض الناقص (${missing.length})</button>`}</td>
+   <td>${shipped
+    ? `<span class="muted small">تم الشحن</span>`
+    : ready
+     ? `<button type="button" class="btn primary mini" data-ship-now="${esc(d.id)}">تأكيد الشحن</button>`
+     : `<span class="muted small">اضغط على الحالة لمعرفة الناقص</span>`}</td>
+  </tr>`;
+ }).join("")}</tbody></table></div>`;
+}
+
+async function loadAuditLog(){
+ const body=$("auditBody"); if(!body) return;
+ body.innerHTML=`<tr><td colspan="5" class="empty">جاري تحميل سجل التغييرات...</td></tr>`;
+ try{
+  const {data,error}=await sb.from("qc_audit_logs").select("*").order("created_at",{ascending:false}).limit(500);
+  if(error) throw error;
+  const q=$("auditSearch").value.trim().toLowerCase();
+  const actionMap={
+   ADD_DEVICE:"إضافة جهاز", ADD_PACKAGE:"إضافة Package",
+   UPDATE:"تعديل Package", UPDATE_SITE_NUMBER:"تعديل رقم الموقع",
+   DELETE_PACKAGE:"حذف Package", CONFIRM_SHIPPING:"تأكيد الشحن",
+   CANCEL_SHIPPING:"إلغاء الشحن", ADD_PERMISSION:"إضافة صلاحية",
+   UPDATE_PERMISSION:"تعديل صلاحية", DELETE_PERMISSION:"حذف صلاحية",
+   UPDATE_PERMISSIONS:"تعديل صلاحيات مستخدم", CREATE_USER:"إنشاء مستخدم",
+   CREATE_ADMIN:"إنشاء Admin"
+  };
+  const rows=(data||[]).filter(r=>!q || [r.actor_name,r.actor_code,r.action,r.details,r.record_id].some(v=>String(v||"").toLowerCase().includes(q)));
+  body.innerHTML=rows.length?rows.map((r,index)=>{
+   const detail=String(r.details||"");
+   const serial=index+1;
+   let operation=actionMap[r.action]||r.action||"—";
+   const m=detail.match(/(?:الجهاز رقم|رقم الجهاز)\s*[:：]?\s*([^\s|]+)/);
+   const stage=detail.match(/Package(?:[:\s]+)([^ للجهاز|]+)/);
+   if(r.action==="UPDATE" || r.action==="DELETE_PACKAGE" || r.action==="ADD_PACKAGE"){
+    const pkg=(detail.match(/Package:\s*([^|]+)/i)||[])[1]?.trim();
+    if(pkg) operation=(actionMap[r.action]||r.action)+" "+pkg;
+   }
+   const reason=(detail.match(/(?:سبب التغيير|السبب)\s*[:：]\s*(.+)$/i)||[])[1]||"—";
+   return `<tr><td><bdi>${esc(serial)}</bdi></td><td>${esc(r.actor_name||r.actor_code||"—")}</td><td>${esc(operation)}</td><td><bdi>${esc(fmtDT(r.created_at))}</bdi></td><td>${esc(reason)}</td></tr>`;
+  }).join(""): `<tr><td colspan="5" class="empty">لا توجد تغييرات مسجلة.</td></tr>`;
+ }catch(e){ body.innerHTML=`<tr><td colspan="5" class="error-box">تعذر تحميل السجل: ${esc(dbErr(e))}</td></tr>`; }
+}
+
+/* =========================
+   RECEIVERS
+========================= */
+
+async function renderReceiverReport(){
+ try{
+  if(!devicesCache.length) devicesCache=await getDevices();
+
+  const search=$("receiverSearch").value.trim().toLowerCase();
+  const packageFilter=$("receiverPackage").value;
+  const projectFilter=$("receiverProject").value;
+
+  const rows=[];
+  window.receiverActionRows=[];
+
+  devicesCache.forEach(device=>{
+   (device.packages||[]).forEach(pkg=>{
+    const receiver=(pkg.receiver_name||"").trim();
+
+    if(!receiver) return;
+
+    if(search &&
+       !receiver.toLowerCase().includes(search) &&
+       !String(device.device_number||"").toLowerCase().includes(search)) return;
+
+    if(packageFilter &&
+       pkg.package_type!==packageFilter) return;
+
+    if(projectFilter &&
+       String(device.project_id)!==String(projectFilter)) return;
+
+    const row={
+     "المستلم":receiver,
+     "المرحلة":pkg.package_type,
+     "المشروع":device.project?.name||"—",
+     "رقم الجهاز":device.device_number||"—"
+    };
+    rows.push(row);
+    window.receiverActionRows.push({
+     ...row,
+     deviceId:device.id,
+     packageId:pkg.id
+    });
+   });
+  });
+
+  receiverRowsCache=rows.map((r,i)=>({"Serial No.":i+1,...r}));
+  window.receiverActionRows.forEach((r,i)=>r._key=String(i+1));
+
+  if(!rows.length){
+   $("receiverReport").innerHTML=
+    `<div class="card empty">لا توجد بيانات مستلمين مطابقة.</div>`;
+   return;
+  }
+
+  const counts={};
+  rows.forEach(r=>{
+   const key=r["المستلم"];
+   counts[key]=(counts[key]||0)+1;
+  });
+
+  $("receiverReport").innerHTML=`
+   <div class="stats">
+    ${Object.entries(counts).slice(0,4).map(([name,count])=>`
+     <div class="card stat">
+      <span>${esc(name)}</span>
+      <strong>${count}</strong>
+     </div>
+    `).join("")}
+   </div>
+
+   <div class="table-wrap">
+    <table>
+     <thead>
+      <tr>
+       <th>Serial No.</th>
+       <th>المستلم</th>
+       <th>المرحلة</th>
+       <th>المشروع</th>
+       <th>رقم الجهاز</th>
+       <th>إجراء</th>
+      </tr>
+     </thead>
+     <tbody>
+      ${receiverRowsCache.map(r=>`
+       <tr>
+        <td>${esc(r["Serial No."])}</td>
+        <td>${esc(r["المستلم"])}</td>
+        <td>${esc(r["المرحلة"])}</td>
+        <td>${esc(r["المشروع"])}</td>
+        <td>${esc(r["رقم الجهاز"])}</td>
+        <td><button type="button" class="btn danger mini" data-receiver-delete="${r["Serial No."]}">حذف</button></td>
+       </tr>
+      `).join("")}
+     </tbody>
+    </table>
+   </div>`;
+
+  document.querySelectorAll("[data-receiver-delete]").forEach(btn=>{
+   btn.onclick=async()=>{
+    const row=window.receiverActionRows.find(x=>String(x._key)===String(btn.dataset.receiverDelete));
+    if(!row) return;
+    const ok=await deletePackage(row.deviceId,row.packageId);
+    if(ok) await renderReceiverReport();
+   };
+  });
+ }catch(e){
+  toast("تعذر تحميل تقرير المستلمين: "+e.message,"err");
+ }
+}
+
+function exportReceivers(){
+ if(!receiverRowsCache.length){
+  toast("لا توجد بيانات للتصدير.","err");
+  return;
+ }
+
+ const ws=XLSX.utils.json_to_sheet(receiverRowsCache);
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,"Receivers");
+ XLSX.writeFile(wb,"QC-Receivers.xlsx");
+}
+
+/* =========================
+   PRINT
+========================= */
+
+function printObjects(title,data){
+ if(!data.length) return;
+
+ const headers=Object.keys(data[0]);
+
+ const html=`
+ <!doctype html>
+ <html lang="ar" dir="rtl">
+ <head>
+  <meta charset="utf-8">
+  <title>${esc(title)}</title>
+  <style>
+   body{font-family:Arial,sans-serif;direction:rtl;padding:20px}
+   h2{text-align:center}
+   table{width:100%;border-collapse:collapse}
+   th,td{border:1px solid #888;padding:7px;text-align:right}
+   th{background:#eee}
+  </style>
+ </head>
+ <body>
+  <h2>QC Device Control - ${esc(title)}</h2>
+  <table>
+   <thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead>
+   <tbody>
+    ${data.map(row=>`
+     <tr>${headers.map(h=>`<td>${esc(row[h])}</td>`).join("")}</tr>
+    `).join("")}
+   </tbody>
+  </table>
+  <script>window.onload=function(){window.print()}<\/script>
+ </body>
+ </html>`;
+
+ const w=window.open("","_blank");
+
+ if(!w){
+  toast("المتصفح منع نافذة الطباعة.","err");
+  return;
+ }
+
+ w.document.open();
+ w.document.write(html);
+ w.document.close();
+}
+
+/* =========================
+   PRINT PAGE (الطباعة)
+========================= */
+
+let printDeviceId=null;
+let printSel=new Set();
+
+const REPORT_CSS=`
+.rpt{font-family:Arial,'IBM Plex Sans Arabic',Tahoma,sans-serif;direction:rtl;color:#111;background:#fff;padding:18px;font-size:13px;text-align:right}
+.rpt h1{font-size:18px;text-align:center;margin:0 0 3px;color:#111}
+.rpt .sub{text-align:center;color:#555;margin-bottom:14px;font-size:12px}
+.rpt .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 14px;border:1px solid #999;padding:10px;margin-bottom:14px}
+.rpt .meta span{color:#666;display:block;font-size:11px}
+.rpt h3{font-size:14px;margin:16px 0 6px;background:#eee;color:#111;padding:6px 8px;border-right:4px solid #0e5c73;page-break-after:avoid}
+.rpt table{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;margin-bottom:6px}
+.rpt .summary-table th:nth-child(1),.rpt .summary-table td:nth-child(1){width:22%}
+.rpt .summary-table th:nth-child(2),.rpt .summary-table td:nth-child(2){width:18%}
+.rpt .summary-table th:nth-child(3),.rpt .summary-table td:nth-child(3){width:25%}
+.rpt .summary-table th:nth-child(4),.rpt .summary-table td:nth-child(4){width:25%}
+.rpt .summary-table th:nth-child(5),.rpt .summary-table td:nth-child(5){width:10%}
+.rpt .item-table th:nth-child(1),.rpt .item-table td:nth-child(1){width:7%}
+.rpt .item-table th:nth-child(2),.rpt .item-table td:nth-child(2){width:38%}
+.rpt .item-table th:nth-child(3),.rpt .item-table td:nth-child(3){width:12%}
+.rpt .item-table th:nth-child(4),.rpt .item-table td:nth-child(4){width:17%}
+.rpt .item-table th:nth-child(5),.rpt .item-table td:nth-child(5){width:26%}
+.rpt .item-table th,.rpt .item-table td{overflow-wrap:anywhere;word-break:break-word;vertical-align:middle}
+.rpt th,.rpt td{border:1px solid #888;padding:5px 7px;text-align:right;font-size:12px;color:#111;background:#fff}
+.rpt th{background:#f0f0f0;font-weight:700}
+.rpt tr{page-break-inside:avoid}
+.rpt tbody tr:hover td{background:#fff}
+.rpt tr:last-child td{border-bottom:1px solid #888}
+.rpt .stagemeta{color:#444;margin-bottom:6px}
+`;
+
+function buildReportHTML(d,stages){
+ const map=pkgMap(d);
+ const st=statusOf(d);
+ const ordered=stageNames().filter(n=>stages.includes(n) && map.has(n));
+ const doneAll=stageNames().filter(n=>map.has(n));
+ const full=ordered.length>0 && ordered.length===doneAll.length;
+
+ const summary=full?`
+  <h3>ملخص المراحل</h3>
+  <table class="summary-table">
+   <thead><tr><th>المرحلة</th><th>الحالة</th><th>المستلم</th><th>التاريخ</th><th>عدد البنود</th></tr></thead>
+   <tbody>
+    ${stageNames().map(n=>{
+     const p=map.get(n);
+     return `<tr>
+      <td>${esc(n)}</td>
+      <td>${p?"✓ مكتملة":"لم تُسجل"}</td>
+      <td>${esc(p?.receiver_name||"")}</td>
+      <td><bdi>${esc(p?fmtDT(p.created_at):"")}</bdi></td>
+      <td>${p?(p.items||[]).length:0}</td>
+     </tr>`;
+    }).join("")}
+   </tbody>
+  </table>`:"";
+
+ const sections=ordered.map(n=>{
+  const p=map.get(n);
+  const items=p.items||[];
+  return `
+  <h3>${esc(n)}</h3>
+  <div class="stagemeta">المستلم: <b>${esc(p.receiver_name||"—")}</b>
+   ${p.created_at?` — تاريخ التسجيل: <bdi>${esc(fmtDT(p.created_at))}</bdi>`:""}</div>
+  <table class="item-table">
+   <thead><tr><th>#</th><th>Description / البند</th><th>العدد</th><th>التاريخ</th><th>ملاحظات</th></tr></thead>
+   <tbody>
+    ${items.length?items.map((it,i)=>`
+     <tr>
+      <td>${i+1}</td>
+      <td>${esc(it.item_name||it.name||"")}</td>
+      <td>${esc(it.quantity??"")}</td>
+      <td><bdi>${esc(String(it.item_date||"").slice(0,10))}</bdi></td>
+      <td>${esc(it.notes||"")}</td>
+     </tr>`).join(""):`<tr><td colspan="5">لا توجد بنود</td></tr>`}
+   </tbody>
+  </table>`;
+ }).join("");
+
+ return `<div class="rpt">
+  <h1>QC Device Control — تقرير جهاز</h1>
+  <div class="sub">قسم الجودة والتجهيز</div>
+  <div class="meta">
+   <div><span>رقم الجهاز</span><b><bdi>${esc(d.device_number||"—")}</bdi></b></div>
+   <div><span>المشروع</span><b>${esc(d.project?.name||"—")}</b></div>
+   <div><span>رقم الجهاز في الموقع</span><b><bdi>${esc(d.site_device_number||"—")}</bdi></b></div>
+   <div><span>الحالة</span><b>${st.label}</b></div>
+   <div><span>تأكيد الشحن</span><b>${d.shipped_at?`<bdi>${esc(fmtDT(d.shipped_at))}</bdi> — ${esc(d.shipped_by_name||"")}`:"—"}</b></div>
+   <div><span>تاريخ الطباعة</span><b><bdi>${esc(fmtDT(new Date().toISOString()))}</bdi></b></div>
+  </div>
+  ${summary}
+  ${sections||`<div class="stagemeta">لم يتم اختيار مراحل.</div>`}
+ </div>`;
+}
+
+function printHTMLWindow(title,inner){
+ const w=window.open("","_blank");
+
+ if(!w){
+  toast("المتصفح منع نافذة الطباعة.","err");
+  return;
+ }
+
+ w.document.open();
+ w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<title>${esc(title)}</title>
+<style>body{margin:0}${REPORT_CSS}@page{size:A4;margin:12mm}</style>
+</head><body>${inner}
+<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script>
+</body></html>`);
+ w.document.close();
+}
+
+async function downloadPDF(filename,inner){
+ if(!window.html2pdf){
+  toast("مكتبة PDF لم تُحمّل. استخدم زر الطباعة ثم اختر Save as PDF.","err");
+  return;
+ }
+
+ const holder=document.createElement("div");
+ holder.style.cssText="position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1";
+ holder.innerHTML=`<style>${REPORT_CSS}</style>${inner}`;
+ document.body.appendChild(holder);
+
+ try{
+  await html2pdf().set({
+   margin:[8,8,8,8],
+   filename,
+   image:{type:"jpeg",quality:.96},
+   html2canvas:{scale:2,useCORS:true,backgroundColor:"#ffffff"},
+   jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},
+   pagebreak:{mode:["css","legacy"],avoid:["tr","h3"]}
+  }).from(holder).save();
+ }catch(e){
+  console.error(e);
+  toast("تعذر إنشاء PDF: "+e.message,"err");
+ }finally{
+  holder.remove();
+ }
+}
+
+function exportDeviceExcel(d,stages){
+ if(!window.XLSX){ toast("مكتبة Excel لم تُحمّل.","err"); return; }
+
+ const map=pkgMap(d);
+ const ordered=stageNames().filter(n=>stages.includes(n) && map.has(n));
+ const wb=XLSX.utils.book_new();
+ wb.Workbook={Views:[{RTL:true}]};
+
+ const info=[
+  ["رقم الجهاز",d.device_number||""],
+  ["المشروع",d.project?.name||""],
+  ["رقم الجهاز في الموقع",d.site_device_number||""],
+  ["الحالة",statusOf(d).label],
+  ["تأكيد الشحن",d.shipped_at?`${fmtDT(d.shipped_at)} — ${d.shipped_by_name||""}`:""],
+  [],
+  ["المرحلة","الحالة","المستلم","التاريخ","عدد البنود"],
+  ...stageNames().map(n=>{
+   const p=map.get(n);
+   return [n,p?"مكتملة":"لم تُسجل",p?.receiver_name||"",p?fmtDT(p.created_at):"",p?(p.items||[]).length:0];
+  })
+ ];
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),"الجهاز");
+
+ ordered.forEach(n=>{
+  const p=map.get(n);
+  const rows=(p.items||[]).map((it,i)=>({
+   "#":i+1,
+   "البند":it.item_name||it.name||"",
+   "العدد":it.quantity??"",
+   "التاريخ":String(it.item_date||"").slice(0,10),
+   "ملاحظات":it.notes||"",
+   "المستلم":p.receiver_name||""
+  }));
+  XLSX.utils.book_append_sheet(
+   wb,
+   XLSX.utils.json_to_sheet(rows.length?rows:[{"البند":"لا توجد بنود"}]),
+   safeSheet(n)
+  );
+ });
+
+ XLSX.writeFile(wb,`QC-Device-${fileSafe(d.device_number)}.xlsx`);
+}
+
+function fileSafe(s){
+ return String(s||"device").replace(/[\\\/:*?"<>|\s]+/g,"-");
+}
+
+function printFiltered(){
+ const q=$("printSearch").value.trim().toLowerCase();
+ const pr=$("printProject").value;
+
+ return devicesCache.filter(d=>
+  (!pr || String(d.project_id||d.project?.id)===String(pr)) &&
+  (!q ||
+   String(d.device_number||"").toLowerCase().includes(q) ||
+   String(d.site_device_number||"").toLowerCase().includes(q))
+ );
+}
+
+async function renderPrintResults(){
+ try{
+  if(!devicesCache.length) devicesCache=await getDevices();
+ }catch(e){
+  toast("تعذر تحميل الأجهزة: "+e.message,"err");
+  return;
+ }
+
+ const list=printFiltered();
+ const shown=list.slice(0,30);
+
+ if(!list.length){
+  $("printResults").innerHTML=`<div class="card empty">لا توجد أجهزة مطابقة.</div>`;
+ }else{
+  $("printResults").innerHTML=`
+  <div class="table-wrap">
+   <table style="min-width:640px">
+    <thead>
+     <tr><th>رقم الجهاز</th><th>المشروع</th><th>المراحل المكتملة</th><th>الحالة</th><th></th></tr>
+    </thead>
+    <tbody>
+     ${shown.map(d=>{
+      const st=statusOf(d);
+      const done=stageNames().filter(n=>pkgMap(d).has(n)).length;
+      return `
+      <tr class="${String(d.id)===String(printDeviceId)?"picked":""}">
+       <td><strong>${esc(d.device_number||"—")}</strong>
+        ${d.site_device_number?`<div class="muted small">الموقع: <bdi>${esc(d.site_device_number)}</bdi></div>`:""}</td>
+       <td>${esc(d.project?.name||"—")}</td>
+       <td>${done} / ${stageNames().length}</td>
+       <td><span class="badge ${st.css}">${st.label}</span></td>
+       <td><button type="button" class="btn soft mini" data-pick="${esc(d.id)}">اختيار</button></td>
+      </tr>`;
+     }).join("")}
+    </tbody>
+   </table>
+  </div>
+  ${list.length>30?`<div class="muted small" style="margin-top:6px">يظهر أول 30 نتيجة من ${list.length} — استخدم البحث لتضييق النتائج.</div>`:""}`;
+ }
+
+ renderPrintPanel();
+}
+
+function pickPrintDevice(id){
+ const d=findDevice(id);
+ if(!d) return;
+
+ printDeviceId=d.id;
+ printSel=new Set(stageNames().filter(n=>pkgMap(d).has(n)));
+ renderPrintResults();
+
+ setTimeout(()=>$("printPanel").scrollIntoView({behavior:"smooth",block:"start"}),50);
+}
+
+function openPrintFor(deviceId,stage){
+ const d=findDevice(deviceId);
+ if(!d) return;
+
+ $("printSearch").value=d.device_number||"";
+ $("printProject").value=String(d.project_id||d.project?.id||"");
+ printDeviceId=d.id;
+ printSel=new Set([stage]);
+
+ openPage("print");
+}
+
+function renderPrintPanel(){
+ const panel=$("printPanel");
+ const d=printDeviceId!=null ? findDevice(printDeviceId) : null;
+
+ if(!d){
+  panel.classList.add("hidden");
+  panel.innerHTML="";
+  return;
+ }
+
+ const map=pkgMap(d);
+ const done=stageNames().filter(n=>map.has(n));
+ printSel=new Set([...printSel].filter(n=>map.has(n)));
+
+ const allOn=done.length>0 && done.every(n=>printSel.has(n));
+ const none=printSel.size===0;
+ const st=statusOf(d);
+
+ panel.classList.remove("hidden");
+ panel.innerHTML=`
+ <div class="card" style="margin-top:16px">
+  <div class="device-head">
+   <div>
+    <strong style="font-size:18px">الجهاز: ${esc(d.device_number)}</strong>
+    <div class="muted" style="margin-top:3px">${esc(d.project?.name||"—")}</div>
+   </div>
+   <span class="badge ${st.css}">${st.label}</span>
+  </div>
+
+  <div class="print-chips">
+   <button type="button" class="chip ${allOn?"on":""}" data-all ${done.length?"":"disabled"}>${allOn?"✓ ":""}الجهاز بالكامل</button>
+   ${stageNames().map(n=>map.has(n)
+    ? `<button type="button" class="chip ${printSel.has(n)?"on":""}" data-tog="${esc(n)}">${printSel.has(n)?"✓ ":""}${esc(n)}</button>`
+    : `<button type="button" class="chip" disabled title="لم تُسجل بعد">${esc(n)} ⏳</button>`
+   ).join("")}
+  </div>
+
+  <div class="toolbar" style="margin:0">
+   <button type="button" class="btn primary" data-pact="print" ${none?"disabled":""}>🖨 طباعة</button>
+   <button type="button" class="btn success" data-pact="pdf" ${none?"disabled":""}>PDF</button>
+   <button type="button" class="btn soft" data-pact="xlsx" ${none?"disabled":""}>Excel</button>
+  </div>
+ </div>
+
+ <div class="preview-wrap"><style>${REPORT_CSS}</style>${buildReportHTML(d,[...printSel])}</div>`;
+}
+
+function handlePrintAction(kind){
+ const d=findDevice(printDeviceId);
+ if(!d || !printSel.size) return;
+
+ const stages=[...printSel];
+ const html=buildReportHTML(d,stages);
+
+ if(kind==="print") printHTMLWindow("تقرير جهاز "+d.device_number,html);
+ if(kind==="pdf") downloadPDF(`QC-Device-${fileSafe(d.device_number)}.pdf`,html);
+ if(kind==="xlsx") exportDeviceExcel(d,stages);
+}
+
+/* =========================
+   NEW EVENTS
+========================= */
+
+function bindNewEvents(){
+
+ /* modal */
+ $("modal").addEventListener("click",e=>{
+  if(e.target===$("modal") || e.target.closest("[data-close]")) closeModal();
+ });
+ document.addEventListener("keydown",e=>{
+  if(e.key==="Escape" && !$("modal").classList.contains("hidden")) closeModal();
+ });
+
+ /* tracking */
+ $("trackingList").addEventListener("click",e=>{
+  const chip=e.target.closest(".stage-chip.done");
+  if(chip) openStageModal(chip.dataset.device,chip.dataset.stage);
+ });
+
+ /* log */
+ $("logSearchMode").addEventListener("change",()=>{
+  $("logSearch").placeholder=
+   $("logSearchMode").value==="site" ? "اكتب رقم الجهاز في الموقع" : "اكتب رقم الجهاز";
+  renderLog();
+ });
+
+ $("logBody").addEventListener("click",e=>{
+  const st=e.target.closest(".stage-ok");
+  if(st){
+   if(!st.classList.contains("static")) goToStage(st.dataset.device,st.dataset.stage);
+   return;
+  }
+  const ship=e.target.closest("[data-ship]");
+  if(ship){ confirmShipping(ship.dataset.ship); return; }
+
+  const permit=e.target.closest("[data-permit]");
+  if(permit){ printShippingPermit(permit.dataset.permit); return; }
+  const un=e.target.closest("[data-unship]");
+  if(un){ cancelShipping(un.dataset.unship); }
+ });
+
+ $("logBody").addEventListener("change",e=>{
+  if(e.target.classList.contains("site-input")) saveSiteNumber(e.target);
+ });
+
+ $("logBody").addEventListener("keydown",e=>{
+  if(e.key==="Enter" && e.target.classList.contains("site-input")) e.target.blur();
+ });
+
+ /* master */
+ const mv=$("masterView");
+
+ mv.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");
+  if(!b) return;
+
+  const act=b.dataset.act;
+  if(act==="stage"){ masterStage=b.dataset.stage; masterSearchValue=""; renderMasterList(); }
+  if(act==="back"){ masterStage=null; renderMasterList(); }
+  if(act==="add") openItemModal(null);
+  if(act==="edit") openItemModal(b.dataset.id);
+  if(act==="del") deleteMasterItem(b.dataset.id);
+  if(act==="template") downloadTemplate();
+ });
+
+ mv.addEventListener("input",e=>{
+  if(e.target.id==="masterSearch"){
+   masterSearchValue=e.target.value;
+   renderMasterTable();
+  }
+ });
+
+ mv.addEventListener("change",e=>{
+  if(e.target.id==="masterImportFile"){
+   const f=e.target.files?.[0];
+   if(f) handleImportFile(f);
+   e.target.value="";
+  }
+ });
+
+ /* print */
+ $("printSearch").addEventListener("input",renderPrintResults);
+ $("printProject").addEventListener("change",renderPrintResults);
+
+ $("printResults").addEventListener("click",e=>{
+  const b=e.target.closest("[data-pick]");
+  if(b) pickPrintDevice(b.dataset.pick);
+ });
+
+ $("printPanel").addEventListener("click",e=>{
+  const d=findDevice(printDeviceId);
+  if(!d) return;
+
+  const tog=e.target.closest("[data-tog]");
+  if(tog){
+   const n=tog.dataset.tog;
+   printSel.has(n) ? printSel.delete(n) : printSel.add(n);
+   renderPrintPanel();
+   return;
+  }
+
+  if(e.target.closest("[data-all]")){
+   const done=stageNames().filter(n=>pkgMap(d).has(n));
+   const allOn=done.every(n=>printSel.has(n));
+   printSel=allOn ? new Set() : new Set(done);
+   renderPrintPanel();
+   return;
+  }
+
+  const act=e.target.closest("[data-pact]");
+  if(act) handlePrintAction(act.dataset.pact);
+ });
+}
+
+/* =========================
+   ADMIN USERS
+========================= */
+
+function getNewPermissions(){
+ return [
+  ...document.querySelectorAll(
+   "#newUserPermissions input[type=checkbox]:checked"
+  )
+ ].map(x=>x.value);
+}
+
+async function createInspector(){
+ if(currentProfile?.role!=="admin"){
+  toast("هذه العملية متاحة للـ Admin فقط.","err");
+  return;
+ }
+
+ const name=$("newUserName").value.trim();
+ const code=$("newUserCode").value.trim().toUpperCase();
+ const permissions=getNewPermissions();
+
+ if(name.length<2){
+  toast("أدخل اسم المستخدم.","err");
+  return;
+ }
+
+ if(!/^[A-Z0-9]{5}$/.test(code)){
+  toast("كود الدخول يجب أن يكون 5 أحرف أو أرقام.","err");
+  return;
+ }
+
+ if(!permissions.includes("home")){
+  permissions.unshift("home");
+ }
+
+ const btn=$("createUserBtn");
+ btn.disabled=true;
+ btn.textContent="جاري الإنشاء...";
+
+ try{
+  const {data,error}=await sb.functions.invoke(
+   "qc-admin-users",
+   {
+    body:{
+     action:"create",
+     name,
+     code,
+     permissions
+    }
+   }
+  );
+
+  if(error) throw error;
+  if(data?.error) throw new Error(data.error);
+
+  $("newUserName").value="";
+  $("newUserCode").value="";
+
+  toast("تم إنشاء حساب المراقب.");
+  await loadUsers();
+
+ }catch(e){
+  console.error(e);
+  toast(
+   e?.message ||
+   "تعذر إنشاء المستخدم. تأكد من نشر qc-admin-users.",
+   "err"
+  );
+ }finally{
+  btn.disabled=false;
+  btn.textContent="＋ إنشاء المستخدم";
+ }
+}
+
+async function loadUsers(){
+ if(currentProfile?.role!=="admin") return;
+
+ $("usersList").innerHTML=
+  `<div class="empty">جاري تحميل المستخدمين...</div>`;
+
+ try{
+  const {data,error}=await sb.functions.invoke(
+   "qc-admin-users",
+   {body:{action:"list"}}
+  );
+
+  if(error) throw error;
+  if(data?.error) throw new Error(data.error);
+
+  const users=data?.users||[];
+
+  if(!users.length){
+   $("usersList").innerHTML=
+    `<div class="empty">لا يوجد مراقبو جودة مسجلون.</div>`;
+   return;
+  }
+
+  $("usersList").innerHTML=users.map(user=>`
+   <div class="user-row">
+    <div class="user-head">
+     <div>
+      <strong>${esc(user.name||"مستخدم")}</strong>
+      <div style="color:var(--muted);font-size:13px;margin-top:3px">
+       ${user.active===false?"الحساب معطل":"الحساب نشط"}
+      </div>
+     </div>
+     <span class="badge ${user.active===false?"red":"green"}">
+      ${user.active===false?"معطل":"نشط"}
+     </span>
+    </div>
+
+    <div class="user-perms">
+     ${(user.permissions||[]).map(p=>
+      `<span class="badge blue">${esc(PAGE_LABELS[p]||p)}</span>`
+     ).join("")}
+    </div>
+
+    <div class="toolbar" style="margin:12px 0 0">
+     <button class="btn soft"
+       onclick="editUserPermissions('${esc(user.id)}')">
+       تعديل الصلاحيات
+     </button>
+
+     <button class="btn soft"
+       onclick="resetUserCode('${esc(user.id)}')">
+       تغيير الكود
+     </button>
+
+     <button class="btn ${user.active===false?"success":"danger"}"
+       onclick="toggleUser('${esc(user.id)}',${user.active===false})">
+       ${user.active===false?"تفعيل":"تعطيل"}
+     </button>
+    </div>
+   </div>
+  `).join("");
+
+ }catch(e){
+  console.error(e);
+  $("usersList").innerHTML=`
+   <div class="error-box">
+    تعذر تحميل المستخدمين.
+    يجب نشر Edge Function باسم qc-admin-users.
+   </div>`;
+ }
+}
+
+async function editUserPermissions(userId){
+ const current=await getUserForEdit(userId);
+ const pages=Object.entries(PAGE_LABELS);
+ openModal(`<div class="modal-head"><h3>تعديل صلاحيات المستخدم</h3><button class="icon-btn" data-close>✕</button></div>
+  <div class="perm-grid-edit" id="editUserPerms">${pages.filter(([k])=>k!=="permissions").map(([k,label])=>`<label class="permission-option"><input type="checkbox" value="${esc(k)}" ${current.includes(k)?"checked":""}> ${esc(label)}</label>`).join("")}</div>
+  <div class="action-row"><button class="btn primary" id="saveUserPerms">حفظ الصلاحيات</button><button class="btn soft" data-close>إلغاء</button></div>`);
+ $("saveUserPerms").onclick=async()=>{
+  const permissions=[...document.querySelectorAll("#editUserPerms input:checked")].map(x=>x.value);
+  if(!permissions.includes("home")) permissions.unshift("home");
+  await adminUserAction({action:"permissions",user_id:userId,permissions});
+  closeModal();
+ };
+}
+
+async function getUserForEdit(userId){
+ try{
+  const {data,error}=await sb.functions.invoke("qc-admin-users",{body:{action:"list"}});
+  if(error) throw error; if(data?.error) throw new Error(data.error);
+  return (data?.users||[]).find(u=>String(u.id)===String(userId))?.permissions||["home","add","tracking"];
+ }catch(e){ toast("تعذر قراءة صلاحيات المستخدم: "+e.message,"err"); return ["home","add","tracking"]; }
+}
+
+async function resetUserCode(userId){
+ const code=prompt("أدخل الكود الجديد المكون من 5 أحرف أو أرقام:");
+
+ if(code===null) return;
+
+ const clean=code.trim().toUpperCase();
+
+ if(!/^[A-Z0-9]{5}$/.test(clean)){
+  toast("الكود غير صحيح.","err");
+  return;
+ }
+
+ await adminUserAction({
+  action:"reset_code",
+  user_id:userId,
+  code:clean
+ });
+}
+
+async function toggleUser(userId,active){
+ await adminUserAction({
+  action:"set_active",
+  user_id:userId,
+  active
+ });
+}
+
+async function adminUserAction(body){
+ try{
+  const {data,error}=await sb.functions.invoke(
+   "qc-admin-users",
+   {body}
+  );
+
+  if(error) throw error;
+  if(data?.error) throw new Error(data.error);
+
+  toast("تم تحديث المستخدم.");
+  await loadUsers();
+ }catch(e){
+  toast(e?.message||"تعذر تنفيذ العملية.","err");
+ }
+}
+
+/* =========================
+   EVENTS
+========================= */
+
+function bindEvents(){
+
+ document.querySelectorAll("[data-login-type]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+   document.querySelectorAll("[data-login-type]")
+    .forEach(x=>x.classList.remove("active"));
+
+   btn.classList.add("active");
+
+   const inspector=
+    btn.dataset.loginType==="inspector";
+
+   $("inspectorLoginBox")
+    .classList.toggle("hidden",!inspector);
+
+   $("adminLoginBox")
+    .classList.toggle("hidden",inspector);
+
+   $("loginError").classList.add("hidden");
+  });
+ });
+
+ $("loginBtn").addEventListener("click",adminLogin);
+
+ $("loginPassword").addEventListener("keydown",e=>{
+  if(e.key==="Enter") adminLogin();
+ });
+
+ $("inspectorLoginBtn").addEventListener("click",inspectorLogin);
+
+ $("inspectorCode").addEventListener("input",e=>{
+  e.target.value=e.target.value
+   .replace(/[^a-zA-Z0-9]/g,"")
+   .toUpperCase()
+   .slice(0,5);
+ });
+
+ $("inspectorCode").addEventListener("keydown",e=>{
+  if(e.key==="Enter") inspectorLogin();
+ });
+
+ $("logoutBtn").addEventListener("click",async()=>{
+  await sb.auth.signOut();
+ });
+
+ $("homeBtn").addEventListener("click",()=>openPage("home"));
+
+ $("themeBtn").addEventListener("click",()=>{
+  const dark=!document.body.classList.contains("dark");
+  localStorage.setItem("qc-theme",dark?"dark":"light");
+  applyTheme();
+ });
+
+ document.querySelectorAll("#mainNav [data-page]")
+  .forEach(btn=>{
+   btn.addEventListener("click",()=>openPage(btn.dataset.page));
+  });
+
+ document.querySelectorAll("[data-go]")
+  .forEach(btn=>{
+   btn.addEventListener("click",()=>openPage(btn.dataset.go));
+  });
+
+ $("packageSelect").addEventListener("change",renderMasterItems);
+
+ $("selectAllItems").addEventListener("click",()=>{
+  const checks=[...document.querySelectorAll(".item-check")];
+  const all=checks.length && checks.every(x=>x.checked);
+  checks.forEach(x=>x.checked=!all);
+ });
+
+ $("packageForm").addEventListener("submit",savePackage);
+
+ $("trackingSearch").addEventListener("input",()=>{trackingPage=1;renderTracking();});
+ $("trackingProject").addEventListener("change",renderTracking);
+ $("trackingStage").addEventListener("change",renderTracking);
+$("trackingList").addEventListener("click",async e=>{ const b=e.target.closest("[data-device-delete]"); if(b) await deleteDevice(b.dataset.deviceDelete); });
+ $("refreshTracking").addEventListener("click",loadTracking);
+
+ $("logSearch").addEventListener("input",()=>{logPage=1;renderLog();});
+ $("logProject").addEventListener("change",renderLog);
+ $("logStatus").addEventListener("change",()=>{logPage=1;renderLog();});
+ $("exportLogBtn").addEventListener("click",exportLog);
+ $("printLogBtn").addEventListener("click",printLog);
+
+ $("selectAllLog").addEventListener("change",e=>{
+  document.querySelectorAll(".log-check")
+   .forEach(x=>x.checked=e.target.checked);
+ });
+
+ $("receiverSearch").addEventListener("input",renderReceiverReport);
+ $("receiverProject").addEventListener("change",renderReceiverReport);
+ $("receiverPackage").addEventListener("change",renderReceiverReport);
+ $("receiverExcel").addEventListener("click",exportReceivers);
+ $("receiverPrint").addEventListener("click",()=>{
+  if(!receiverRowsCache.length){
+   toast("لا توجد بيانات للطباعة.","err");
+   return;
+  }
+  printObjects("تقرير المستلمين",receiverRowsCache);
+ });
+
+
+ bindNewEvents();
+
+ $("createUserBtn").addEventListener("click",createInspector);
+ $("refreshUsersBtn").addEventListener("click",loadUsers);
+
+ $("shippingSearch").addEventListener("input",renderShippingPage);
+ $("shippingProject").addEventListener("change",renderShippingPage);
+ $("refreshShipping").addEventListener("click",async()=>{devicesCache=await getDevices();renderShippingPage();});
+ $("shippingList").addEventListener("click",async e=>{
+  const m=e.target.closest("[data-shipping-missing]");
+  if(m){openShippingMissing(m.dataset.shippingMissing);return;}
+  const b=e.target.closest("[data-ship-now]");
+  if(b){await confirmShipping(b.dataset.shipNow);renderShippingPage();}
+ });
+ $("auditSearch").addEventListener("input",loadAuditLog);
+ $("refreshAudit").addEventListener("click",loadAuditLog);
+
+ $("newUserCode").addEventListener("input",e=>{
+  e.target.value=e.target.value
+   .replace(/[^a-zA-Z0-9]/g,"")
+   .toUpperCase()
+   .slice(0,5);
+ });
+}
+
+/* =========================
+   APP SESSION
+========================= */
+
+async function enterApp(user){
+ currentUser=user;
+
+ showApp();
+
+ try{
+  await loadProfile();
+  await loadMasterData();
+  await loadTracking();
+
+  let firstPage=localStorage.getItem("qc-active-page")||"home";
+
+  if(currentProfile?.role!=="admin" && !hasPage(firstPage)){
+   firstPage=hasPage("home") ? "home" : (currentPermissions[0]||"home");
+  }
+
+  openPage(firstPage);
+
+ }catch(e){
+  console.error(e);
+  toast(e.message,"err");
+
+  /*
+    لا نعرض شاشة بيضاء حتى لو فشل Query.
+  */
+ }
+}
+
+async function boot(){
+ try{
+  applyTheme();
+  bindEvents();
+
+  if(!window.supabase?.createClient){
+   throw new Error(
+    "لم يتم تحميل مكتبة Supabase. تحقق من اتصال الإنترنت."
+   );
+  }
+
+  if(!window.XLSX){
+   console.warn("SheetJS لم يتم تحميلها.");
+  }
+
+  sb=window.supabase.createClient(
+   SUPABASE_URL,
+   SUPABASE_PUBLISHABLE_KEY,
+   {
+    auth:{
+     persistSession:true,
+     autoRefreshToken:true,
+     detectSessionInUrl:true
+    }
+   }
+  );
+
+  const {data,error}=await sb.auth.getSession();
+
+  if(error) throw error;
+
+  if(data.session?.user){
+   await enterApp(data.session.user);
+  }else{
+   showLogin();
+  }
+
+  sb.auth.onAuthStateChange((event,session)=>{
+   setTimeout(async()=>{
+    try{
+     if(event==="SIGNED_OUT" || !session){
+      currentUser=null;
+      currentProfile=null;
+      currentPermissions=[];
+      showLogin();
+      return;
+     }
+
+     if(
+      (event==="SIGNED_IN" ||
+       event==="TOKEN_REFRESHED" ||
+       event==="INITIAL_SESSION") &&
+      session?.user
+     ){
+      if(currentUser?.id!==session.user.id || event==="SIGNED_IN"){
+       await enterApp(session.user);
+      }
+     }
+    }catch(e){
+     console.error(e);
+     toast(e.message,"err");
+    }
+   },0);
+  });
+
+ }catch(e){
+  fatal(e);
+ }
+}
+
+document.addEventListener("DOMContentLoaded",boot);
+</script>
+</body>
+</html>
